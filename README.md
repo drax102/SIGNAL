@@ -1,190 +1,138 @@
 # SIGNAL — Multi-Source Job Ingestion Platform
 
-SIGNAL is a high-reliability, fault-tolerant job intelligence platform that aggregates, normalizes, validates, and deduplicates remote job listings from multiple public sources: **RemoteOK**, **Jobicy**, and **Remotive**.
+SIGNAL is a high-reliability, fault-tolerant job intelligence platform engineered for **Acdyon Technologies Challenge Part 1** (“Getting Data Out of a Platform That Doesn’t Want You To”). It aggregates, normalizes, validates, and deduplicates remote job listings from public sources (**RemoteOK**, **Jobicy**, and **Remotive**).
 
 ---
 
-## 🏗 System Architecture & Data Pipeline
+## 🏗 System Architecture & Ingestion Flow
 
 ```mermaid
 flowchart TD
-    subgraph Upstream Data Sources
-        ROK[RemoteOK API]
-        JOB[Jobicy API v2]
-        REM[Remotive API]
+    subgraph Upstream Public Sources
+        S1[RemoteOK API]
+        S2[Jobicy API v2]
+        S3[Remotive API]
     end
 
-    subgraph Async Ingestion Engine FastAPI
-        FETCH[Concurrent Fetcher & Retry Engine]
-        NORM[Schema Normalization]
-        VAL[Validation & Quality Filter]
-        DEDUP[Cross-Source Deduplication]
-        STATE[(In-Memory Job Store & State)]
+    subgraph Resilient Ingestion Pipeline
+        Source[Source Adapters]
+        Fetcher[Async HTTP Fetcher]
+        Retry[Retry & Exponential Backoff]
+        Normalize[Schema Normalization]
+        Validate[Validation & Record Filtering]
+        Dedupe[Deterministic Deduplication]
     end
 
-    subgraph REST API Endpoints
+    subgraph Storage & Observability
+        State[(In-Memory Store & Source Metrics)]
+    end
+
+    subgraph API Layer
         API_JOBS[GET /api/jobs]
+        API_SOURCES[GET /api/sources]
         API_HEALTH[GET /api/health]
         API_STATS[GET /api/stats]
+        API_SIM[POST /api/test/simulate-failure]
         API_SYNC[POST /api/sync]
     end
 
     subgraph React Dashboard
-        UI[Editorial Intelligence Dashboard]
+        UI[Pipeline Flow & Job Dashboard]
     end
 
-    ROK -->|HTTP Async| FETCH
-    JOB -->|HTTP Async| FETCH
-    REM -->|HTTP Async| FETCH
+    S1 --> Source
+    S2 --> Source
+    S3 --> Source
 
-    FETCH --> NORM
-    NORM --> VAL
-    VAL --> DEDUP
-    DEDUP --> STATE
+    Source --> Fetcher
+    Fetcher --> Retry
+    Retry --> Normalize
+    Normalize --> Validate
+    Validate --> Dedupe
+    Dedupe --> State
 
-    STATE --> API_JOBS
-    STATE --> API_HEALTH
-    STATE --> API_STATS
-    STATE --> API_SYNC
+    State --> API_JOBS
+    State --> API_SOURCES
+    State --> API_HEALTH
+    State --> API_STATS
+    State --> API_SIM
+    State --> API_SYNC
 
     API_JOBS --> UI
+    API_SOURCES --> UI
     API_HEALTH --> UI
     API_STATS --> UI
+    API_SIM --> UI
     API_SYNC --> UI
 ```
 
----
+### Ingestion Flow Stages
+`Source → Fetcher → Retry / Backoff → Normalize → Validate → Deduplicate → API → Dashboard`
 
-## 🎯 Problem & Solution
-
-### Problem
-- Job aggregators often rely on single sources, brittle web scrapers, or closed APIs.
-- Cross-posting leads to duplicate listings across different boards.
-- Irrelevant geographic labeling confuses candidates seeking region-specific roles (e.g. India-based remote roles vs. North America-only remote roles).
-
-### Solution
-- **Multi-Source Ingestion**: Aggregates from RemoteOK, Jobicy, and Remotive via official public APIs.
-- **Normalized Schema**: Standardizes heterogeneous payloads into a unified format while retaining source attribution.
-- **Cross-Source Deduplication**: Eliminates duplicate postings using normalized URL matching and composite signature hashes `(company + title + location)`.
-- **Fault-Tolerant Execution**: Employs `asyncio.gather(..., return_exceptions=True)` so that single-source failures do not disrupt the pipeline.
-- **Geographic Intelligence**: Explicitly classifies India-relevant jobs based on city and country tokens without misclassifying general "Worldwide" listings.
+### Failure / Fallback Path
+1. **Per-Source Isolation**: If a single source times out or returns HTTP 5xx, the error is recorded on that adapter (`status: "degraded"`), while the remaining healthy sources continue fetching and serving live data.
+2. **Partial Degraded Mode**: The API returns `200 OK` with `status: "degraded"` and partial live jobs.
+3. **Fallback Dataset**: If all live sources fail simultaneously and no cached data exists, SIGNAL activates a validated local fallback dataset so the application never crashes or presents a blank state.
 
 ---
 
-## ⚙️ Core Technical Features
+## ⚙️ Core Engineering Features
 
-### 1. Multi-Source Adapters
-- **RemoteOK**: Ingests public JSON API (`https://remoteok.com/api`).
-- **Jobicy**: Ingests `https://jobicy.com/api/v2/remote-jobs?count=100`.
-- **Remotive**: Ingests `https://remotive.com/api/remote-jobs`, preserving original job URLs and source attribution.
+### 1. Isolated Source Adapters (`backend/adapters.py`)
+Modular classes extending `BaseSourceAdapter` (`RemoteOKAdapter`, `JobicyAdapter`, `RemotiveAdapter`), encapsulating provider-specific fetching, schema mapping, and validation.
 
-### 2. Common Normalized Job Schema
-Every adapter transforms raw provider payloads into a single schema:
+### 2. Multi-Tier Skill Extractor
+Evaluates skills across a 70+ technology dictionary:
+1. Explicit source skills & tags
+2. Full job description scanning
+3. Job title scanning
+Strict word-boundary matching (`\b`) prevents false positives (`Java` vs `JavaScript`, `C` vs `CSS`).
 
-```json
-{
-  "id": "jobicy-151087",
-  "source": "Jobicy",
-  "title": "Customer & Field Marketing Manager",
-  "company": "PerfectServe",
-  "location": "USA",
-  "remote": true,
-  "is_india": false,
-  "tags": ["Marketing & Sales", "Full-Time"],
-  "url": "https://jobicy.com/jobs/...",
-  "logo": "https://jobicy.com/data/...",
-  "salary": "USD 110,000 - 135,000",
-  "posted": "2026-02-19 09:22:20",
-  "description": "Job description text..."
-}
-```
+### 3. Cross-Source Deduplication
+Deduplicates jobs using normalized canonical URLs (stripping query parameters and protocols) and composite hashes `(company:title:location)`.
 
-### 3. Deduplication Engine
-Cross-source deduplication prevents identical jobs listed on different platforms from appearing twice:
-- **Canonical URL Hashing**: Normalizes URLs to strip query parameters, protocol variations, and trailing slashes.
-- **Composite Signature**: Generates `lower(company):lower(title):lower(location)` hashes after stripping special characters.
-
-### 4. India Geographic Filtering
-Classifies jobs as India-relevant if location or title contains recognized Indian tech hubs and region tokens (e.g., `India`, `Bengaluru`, `Bangalore`, `Mumbai`, `Delhi`, `Hyderabad`, `Pune`, `Chennai`, `Gurugram`, `Noida`, `Kolkata`, `Ahmedabad`, `Jaipur`, `Kochi`, etc.). "Worldwide" remote jobs are not falsely assumed to be India jobs unless explicitly indicated.
-
-### 5. Retry Strategy & Partial Failure Resilience
-- Bounded retries (up to 3 attempts) with exponential backoff (`0.5s * 2^attempt`) per source.
-- Concurrent execution using `asyncio.gather(..., return_exceptions=True)`.
-- If one provider fails (e.g. Remotive returns 5xx), the remaining healthy providers continue serving live data. The system reports `status: "degraded"` alongside per-source status.
-- Fallback dataset is activated only if all live sources fail and no previous live cache exists.
+### 4. Live Interview Failure Simulation (`POST /api/test/simulate-failure`)
+Supports simulating `timeout`, `http_error`, `empty`, or `malformed` payloads for any source during live interview demonstrations without altering production code.
 
 ---
 
 ## 🔌 API Reference
 
-### `GET /api/jobs`
-Query Parameters:
-- `q`: Search string (title, company, location, skills, description)
-- `source`: Filter by source (`RemoteOK`, `Jobicy`, `Remotive`, `All Sources`)
-- `location`: Filter by region (`India`, `Remote`, `Global`, `All`)
-- `tags`: Comma-separated tag filters
-- `limit`: Number of results (default 200, max 500)
-
-### `GET /api/health`
-Returns pipeline health and source-level status:
-```json
-{
-  "status": "healthy",
-  "mode": "live",
-  "sources": {
-    "RemoteOK": "healthy",
-    "Jobicy": "healthy",
-    "Remotive": "healthy"
-  },
-  "last_attempt": "2026-08-19T11:15:56Z",
-  "last_success": "2026-08-19T11:16:02Z",
-  "last_error": null
-}
-```
-
-### `GET /api/stats`
-Returns live ingestion metrics:
-```json
-{
-  "fetched": 217,
-  "accepted": 217,
-  "rejected": 0,
-  "stored": 217,
-  "sources": 3,
-  "by_source": {
-    "RemoteOK": 100,
-    "Jobicy": 100,
-    "Remotive": 17
-  },
-  "india_jobs": 3,
-  "remote_jobs": 217
-}
-```
-
-### `POST /api/sync`
-Triggers immediate multi-source re-ingestion.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/jobs` | GET | Query jobs with filters (`q`, `source`, `location`, `category`, `limit`) |
+| `/api/sources` | GET | Per-source observability metrics (`fetched`, `accepted`, `rejected`, `duplicates`, `status`) |
+| `/api/health` | GET | System health and source availability status |
+| `/api/stats` | GET | Summary statistics (`stored`, `by_source`, `india_jobs`, `remote_jobs`) |
+| `/api/sync` | POST | Trigger immediate re-sync across all sources |
+| `/api/test/simulate-failure` | POST | Simulate source failure for live interview demos |
 
 ---
 
-## 🚀 Development & Deployment Setup
+## 🚀 Local Execution Commands
 
-### 1. Local Development
+### Environment Variables
 
-#### Frontend (React + TypeScript + Vite + Tailwind CSS)
-```bash
-npm install
-npm run dev
-```
+| Variable | Local / Dev | Render Production | Description |
+|---|---|---|---|
+| `ENVIRONMENT` | `development` (or unset) | `production` | Enforces production security guards on test endpoints |
+| `ALLOW_TEST_SIMULATION` | `false` (or unset) | Do NOT set (`false`) | Guard for `/api/test/simulate-failure`. Returns HTTP 403 in production unless explicitly set |
 
-#### Backend (FastAPI + AsyncIO + HTTPX)
+### Backend (FastAPI)
 ```bash
 cd backend
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-### 2. Production Deployment
+### Frontend (React + Vite)
+```bash
+npm install
+npm run dev
+```
 
-- **Frontend**: Deployed on [Vercel](https://signal-three-orpin.vercel.app/)
-  - Environment variable: `VITE_API_BASE=https://signal-rbcd.onrender.com/api`
-- **Backend**: Deployed on [Render](https://signal-rbcd.onrender.com)
+### Build & Typecheck Verification
+```bash
+npm run typecheck
+npm run build
+```

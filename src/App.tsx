@@ -8,8 +8,8 @@ import JobDetailDrawer from '@/components/JobDetailDrawer';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
-import { fetchHealth, fetchJobs, fetchStats, syncJobs } from '@/api';
-import type { Health, Job, Stats } from '@/types';
+import { fetchHealth, fetchJobs, fetchStats, fetchSources, syncJobs } from '@/api';
+import type { Health, Job, Stats, SourceMetrics } from '@/types';
 
 export default function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -26,6 +26,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [sources, setSources] = useState<SourceMetrics[]>([]);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
@@ -35,7 +36,7 @@ export default function App() {
       setLoading(true);
       setError(null);
       try {
-        const [data, h, s] = await Promise.all([
+        const [data, h, s, srcData] = await Promise.all([
           fetchJobs({
             q: qStr || undefined,
             location: locStr !== 'All' ? locStr : undefined,
@@ -45,10 +46,12 @@ export default function App() {
           }),
           fetchHealth(),
           fetchStats(),
+          fetchSources(),
         ]);
-        setJobs(data);
+        setJobs(data.jobs || []);
         setHealth(h);
         setStats(s);
+        setSources(srcData.sources || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to connect to job service');
       } finally {
@@ -65,6 +68,7 @@ export default function App() {
     try {
       const updatedHealth = await syncJobs();
       const updatedStats = await fetchStats();
+      const updatedSources = await fetchSources();
       const updatedJobs = await fetchJobs({
         q: query || undefined,
         location: locationFilter !== 'All' ? locationFilter : undefined,
@@ -75,7 +79,8 @@ export default function App() {
 
       setHealth(updatedHealth);
       setStats(updatedStats);
-      setJobs(updatedJobs);
+      setSources(updatedSources.sources || []);
+      setJobs(updatedJobs.jobs || []);
 
       const degradedSources = Object.entries(updatedHealth.sources || {})
         .filter(([, status]) => status !== 'healthy')
@@ -143,7 +148,10 @@ export default function App() {
         <KpiCards stats={stats} health={health} />
 
         {/* Data Pipeline Technical Visualization */}
-        <PipelineFlow health={health} stats={stats} />
+        <PipelineFlow
+          sources={sources}
+          onRefresh={() => refresh(query, locationFilter, sourceFilter, categoryFilter)}
+        />
 
         {/* Search & Filter Bar */}
         <SearchBar

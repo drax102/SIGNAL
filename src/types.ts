@@ -23,6 +23,24 @@ export interface JobsResponse {
   jobs: Job[];
 }
 
+export interface SourceMetrics {
+  source: string;
+  status: 'healthy' | 'degraded' | 'failed' | 'not_synced';
+  fetched: number;
+  accepted: number;
+  rejected: number;
+  duplicates: number;
+  last_attempt: string | null;
+  last_success: string | null;
+  last_error: string | null;
+}
+
+export interface SourcesResponse {
+  sources: SourceMetrics[];
+  overall_status: string;
+  last_sync: string | null;
+}
+
 export interface Health {
   status: 'healthy' | 'degraded' | 'not_synced' | 'error';
   mode: 'live' | 'fallback';
