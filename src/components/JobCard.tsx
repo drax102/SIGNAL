@@ -21,6 +21,33 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
     }
   };
 
+  const getCategoryBadgeStyle = (category?: string) => {
+    switch ((category || '').toLowerCase()) {
+      case 'engineering':
+        return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'data':
+        return 'bg-blue-50 text-blue-800 border-blue-200';
+      case 'devops / cloud':
+        return 'bg-amber-50 text-amber-900 border-amber-200';
+      case 'design':
+        return 'bg-rose-50 text-rose-800 border-rose-200';
+      case 'marketing':
+        return 'bg-orange-50 text-orange-800 border-orange-200';
+      case 'sales':
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      case 'support':
+        return 'bg-cyan-50 text-cyan-800 border-cyan-200';
+      case 'security':
+        return 'bg-red-50 text-red-800 border-red-200';
+      case 'product':
+        return 'bg-violet-50 text-violet-800 border-violet-200';
+      case 'finance':
+        return 'bg-teal-50 text-teal-800 border-teal-200';
+      default:
+        return 'bg-neutral-100 text-neutral-700 border-neutral-200';
+    }
+  };
+
   const skills = (job.skills && job.skills.length > 0) ? job.skills : (job.tags || []);
   const maxDisplaySkills = 5;
   const visibleSkills = skills.slice(0, maxDisplaySkills);
@@ -69,7 +96,7 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
         </h3>
 
         {/* Location & Remote status */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#66736C]">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-[#66736C]">
           <span className="inline-flex items-center gap-1 font-medium text-[#17211C]">
             <MapPin className="h-3.5 w-3.5 text-[#1F6F54]" />
             {job.location}
@@ -82,8 +109,8 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
           )}
 
           {job.remote && (
-            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-[#1F6F54] font-semibold">
-              <Globe className="h-3 w-3 text-[#1F6F54]" />
+            <span className="inline-flex items-center gap-1 font-mono text-[11px] text-blue-700 font-bold bg-blue-50 border border-blue-200 px-1.5 py-0.2 rounded">
+              <Globe className="h-3 w-3 text-blue-600" />
               Remote
             </span>
           )}
@@ -119,13 +146,12 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
         </div>
 
         {/* Category & Employment Type */}
-        <div className="mt-3 text-[11px] font-mono text-[#66736C]">
-          <span>Category: </span>
-          <span className="font-bold text-[#17211C]">
+        <div className="mt-3 flex items-center gap-2 text-[11px] font-mono">
+          <span className={`rounded px-2 py-0.5 font-bold border ${getCategoryBadgeStyle(job.category)}`}>
             {job.category || 'Other'}
           </span>
           {job.employment_type && (
-            <span> · {job.employment_type}</span>
+            <span className="text-[#66736C]">· {job.employment_type}</span>
           )}
         </div>
       </div>
@@ -140,7 +166,9 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
           href={job.url}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
           className="inline-flex items-center gap-1 font-bold text-[#12372A] hover:text-[#1F6F54] transition-colors"
         >
           View Job

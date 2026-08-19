@@ -18,7 +18,7 @@ REMOTIVE_URL = os.getenv("REMOTIVE_URL", "https://remotive.com/api/remote-jobs")
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 12.0
 
-app = FastAPI(title="Signal API", version="3.0.0")
+app = FastAPI(title="Signal API", version="3.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -99,208 +99,103 @@ INDIA_KEYWORDS = {
     "maharashtra", "tamil", "nadu", "telangana", "kerala", "gujarat"
 }
 
-SKILL_EXPLICIT_MAP = {
-    # Programming Languages
-    "c++": "C++",
-    "cpp": "C++",
-    "c#": "C#",
-    "csharp": "C#",
-    "java": "Java",
-    "python": "Python",
-    "javascript": "JavaScript",
-    "js": "JavaScript",
-    "typescript": "TypeScript",
-    "ts": "TypeScript",
-    "golang": "Go",
-    "go": "Go",
-    "rust": "Rust",
-    "ruby": "Ruby",
-    "php": "PHP",
-    "scala": "Scala",
-    "kotlin": "Kotlin",
-    "swift": "Swift",
-    "sql": "SQL",
-    "html": "HTML",
-    "css": "CSS",
-    # Frontend
-    "react": "React",
-    "reactjs": "React",
-    "react.js": "React",
-    "angular": "Angular",
-    "vue": "Vue.js",
-    "vuejs": "Vue.js",
-    "next.js": "Next.js",
-    "nextjs": "Next.js",
-    "svelte": "Svelte",
-    "tailwind": "Tailwind CSS",
-    "tailwindcss": "Tailwind CSS",
-    "bootstrap": "Bootstrap",
-    "redux": "Redux",
-    # Backend & Frameworks
-    "node.js": "Node.js",
-    "nodejs": "Node.js",
-    "node": "Node.js",
-    "express": "Express.js",
-    "express.js": "Express.js",
-    "expressjs": "Express.js",
-    "fastapi": "FastAPI",
-    "django": "Django",
-    "flask": "Flask",
-    "spring boot": "Spring Boot",
-    "spring": "Spring Boot",
-    "rails": "Ruby on Rails",
-    "ruby on rails": "Ruby on Rails",
-    "graphql": "GraphQL",
-    "rest api": "REST API",
-    "restful": "REST API",
-    "grpc": "gRPC",
-    "microservices": "Microservices",
-    # Databases
-    "postgresql": "PostgreSQL",
-    "postgres": "PostgreSQL",
-    "mysql": "MySQL",
-    "mongodb": "MongoDB",
-    "redis": "Redis",
-    "elasticsearch": "Elasticsearch",
-    "sqlite": "SQLite",
-    "dynamodb": "DynamoDB",
-    "snowflake": "Snowflake",
-    # Cloud & DevOps
-    "aws": "AWS",
-    "amazon web services": "AWS",
-    "azure": "Azure",
-    "gcp": "GCP",
-    "google cloud": "GCP",
-    "docker": "Docker",
-    "kubernetes": "Kubernetes",
-    "k8s": "Kubernetes",
-    "terraform": "Terraform",
-    "ansible": "Ansible",
-    "jenkins": "Jenkins",
-    "ci/cd": "CI/CD",
-    "cicd": "CI/CD",
-    "linux": "Linux",
-    "git": "Git",
-    "github": "GitHub",
-    "gitlab": "GitLab",
-    # AI / ML / Data
-    "machine learning": "Machine Learning",
-    "deep learning": "Deep Learning",
-    "tensorflow": "TensorFlow",
-    "pytorch": "PyTorch",
-    "scikit-learn": "Scikit-Learn",
-    "pandas": "Pandas",
-    "numpy": "NumPy",
-    "data analysis": "Data Analysis",
-    "data analytics": "Data Analysis",
-    "power bi": "Power BI",
-    "powerbi": "Power BI",
-    "tableau": "Tableau",
-    "nlp": "NLP",
-    "ai/ml": "AI/ML",
-    # Design / Product / Business / Domain
-    "figma": "Figma",
-    "ui/ux": "UI/UX",
-    "jira": "Jira",
-    "scrum": "Scrum",
-    "agile": "Agile",
-    "salesforce": "Salesforce",
-    "hubspot": "HubSpot",
-    "crm": "CRM",
-    "seo": "SEO",
-    "copywriting": "Copywriting",
-    "content strategy": "Content Strategy",
-    "graphic design": "Graphic Design",
-    "project management": "Project Management",
-    "product management": "Product Management",
-    "account management": "Account Management",
-    "customer support": "Customer Support",
-    "b2b": "B2B",
-    # Security & QA
-    "cybersecurity": "Cybersecurity",
-    "information security": "Cybersecurity",
-    "networking": "Networking",
-    "selenium": "Selenium",
-    "testing": "Testing",
-    "playwright": "Playwright",
-    "cypress": "Cypress",
-    "qa": "QA",
-}
-
 SKILL_PATTERNS = [
+    # Programming Languages
     (r"\b(c\+\+|cpp)\b", "C++"),
-    (r"\b(c#|csharp)\b", "C#"),
-    (r"\b(python)\b", "Python"),
-    (r"\b(java)\b", "Java"),
-    (r"\b(typescript|ts)\b", "TypeScript"),
+    (r"\b(c#|csharp|\.net|dotnet)\b", "C#"),
+    (r"\bJava(?!Script)\b", "Java"),
+    (r"\bpython\b", "Python"),
     (r"\b(javascript|js)\b", "JavaScript"),
+    (r"\b(typescript|ts)\b", "TypeScript"),
     (r"\b(golang)\b", "Go"),
-    (r"\b(rust)\b", "Rust"),
-    (r"\b(ruby)\b", "Ruby"),
-    (r"\b(php)\b", "PHP"),
-    (r"\b(scala)\b", "Scala"),
-    (r"\b(kotlin)\b", "Kotlin"),
-    (r"\b(swift)\b", "Swift"),
-    (r"\b(sql)\b", "SQL"),
-    (r"\b(html)\b", "HTML"),
-    (r"\b(css)\b", "CSS"),
+    (r"\brust\b", "Rust"),
+    (r"\bruby\b", "Ruby"),
+    (r"\bphp\b", "PHP"),
+    (r"\bscala\b", "Scala"),
+    (r"\bkotlin\b", "Kotlin"),
+    (r"\bswift\b", "Swift"),
+    (r"\bsql\b", "SQL"),
+    (r"\bhtml\b", "HTML"),
+    (r"\bcss\b", "CSS"),
+
+    # Frontend
     (r"\b(react|reactjs|react\.js)\b", "React"),
     (r"\b(angular|angularjs)\b", "Angular"),
     (r"\b(vue|vuejs|vue\.js)\b", "Vue.js"),
     (r"\b(next\.js|nextjs)\b", "Next.js"),
     (r"\b(tailwind|tailwindcss)\b", "Tailwind CSS"),
+    (r"\bbootstrap\b", "Bootstrap"),
+    (r"\bredux\b", "Redux"),
+
+    # Backend & Frameworks
     (r"\b(node|nodejs|node\.js)\b", "Node.js"),
     (r"\b(express\.js|expressjs)\b", "Express.js"),
-    (r"\b(fastapi)\b", "FastAPI"),
-    (r"\b(django)\b", "Django"),
-    (r"\b(flask)\b", "Flask"),
-    (r"\b(spring boot|spring)\b", "Spring Boot"),
+    (r"\bfastapi\b", "FastAPI"),
+    (r"\bdjango\b", "Django"),
+    (r"\bflask\b", "Flask"),
+    (r"\b(spring boot|spring framework)\b", "Spring Boot"),
     (r"\b(rails|ruby on rails)\b", "Ruby on Rails"),
-    (r"\b(graphql)\b", "GraphQL"),
-    (r"\b(rest api|restful)\b", "REST API"),
+    (r"\bgraphql\b", "GraphQL"),
+    (r"\b(rest api|restful|rest apis)\b", "REST API"),
+
+    # Database
     (r"\b(postgresql|postgres)\b", "PostgreSQL"),
-    (r"\b(mysql)\b", "MySQL"),
+    (r"\bmysql\b", "MySQL"),
     (r"\b(mongodb|mongo)\b", "MongoDB"),
-    (r"\b(redis)\b", "Redis"),
-    (r"\b(elasticsearch)\b", "Elasticsearch"),
+    (r"\bredis\b", "Redis"),
+    (r"\bdynamodb\b", "DynamoDB"),
+    (r"\bsnowflake\b", "Snowflake"),
+    (r"\belasticsearch\b", "Elasticsearch"),
+
+    # Cloud & DevOps
     (r"\b(aws|amazon web services)\b", "AWS"),
-    (r"\b(azure)\b", "Azure"),
+    (r"\bazure\b", "Azure"),
     (r"\b(gcp|google cloud)\b", "GCP"),
-    (r"\b(docker)\b", "Docker"),
+    (r"\bdocker\b", "Docker"),
     (r"\b(kubernetes|k8s)\b", "Kubernetes"),
-    (r"\b(terraform)\b", "Terraform"),
-    (r"\b(ansible)\b", "Ansible"),
-    (r"\b(jenkins)\b", "Jenkins"),
+    (r"\bterraform\b", "Terraform"),
+    (r"\bansible\b", "Ansible"),
+    (r"\bjenkins\b", "Jenkins"),
     (r"\b(ci/cd|cicd)\b", "CI/CD"),
-    (r"\b(linux)\b", "Linux"),
-    (r"\b(git)\b", "Git"),
-    (r"\b(github)\b", "GitHub"),
-    (r"\b(gitlab)\b", "GitLab"),
+    (r"\blinux\b", "Linux"),
+    (r"\b(git|github|gitlab)\b", "Git"),
+
+    # Data & AI
+    (r"\bpandas\b", "Pandas"),
+    (r"\bnumpy\b", "NumPy"),
+    (r"\b(power bi|powerbi)\b", "Power BI"),
+    (r"\btableau\b", "Tableau"),
+    (r"\b(data analysis|data analytics)\b", "Data Analysis"),
     (r"\b(machine learning)\b", "Machine Learning"),
     (r"\b(deep learning)\b", "Deep Learning"),
-    (r"\b(tensorflow)\b", "TensorFlow"),
-    (r"\b(pytorch)\b", "PyTorch"),
-    (r"\b(pandas)\b", "Pandas"),
-    (r"\b(numpy)\b", "NumPy"),
-    (r"\b(data analysis|data analytics)\b", "Data Analysis"),
-    (r"\b(power bi|powerbi)\b", "Power BI"),
-    (r"\b(tableau)\b", "Tableau"),
-    (r"\b(figma)\b", "Figma"),
-    (r"\b(ui/ux)\b", "UI/UX"),
-    (r"\b(salesforce)\b", "Salesforce"),
-    (r"\b(hubspot)\b", "HubSpot"),
-    (r"\b(crm)\b", "CRM"),
-    (r"\b(seo)\b", "SEO"),
-    (r"\b(account management)\b", "Account Management"),
-    (r"\b(customer support|customer service)\b", "Customer Support"),
-    (r"\b(project management)\b", "Project Management"),
-    (r"\b(product management)\b", "Product Management"),
-    (r"\b(copywriting)\b", "Copywriting"),
-    (r"\b(b2b)\b", "B2B"),
-    (r"\b(cybersecurity|security)\b", "Cybersecurity"),
-    (r"\b(networking)\b", "Networking"),
-    (r"\b(selenium)\b", "Selenium"),
-    (r"\b(testing|qa)\b", "Testing"),
+    (r"\btensorflow\b", "TensorFlow"),
+    (r"\bpytorch\b", "PyTorch"),
+    (r"\b(nlp|natural language processing)\b", "NLP"),
+    (r"\b(computer vision)\b", "Computer Vision"),
+
+    # Security & QA
+    (r"\b(cybersecurity|network security|infosec)\b", "Cybersecurity"),
+    (r"\bsiem\b", "SIEM"),
+    (r"\bsoc\b", "SOC"),
+    (r"\b(penetration testing|pentesting)\b", "Penetration Testing"),
+    (r"\bselenium\b", "Selenium"),
+    (r"\bcypress\b", "Cypress"),
+    (r"\bjest\b", "Jest"),
+    (r"\bpytest\b", "PyTest"),
+    (r"\bunit testing\b", "Unit Testing"),
+    (r"\b(qa|quality assurance)\b", "QA"),
+
+    # Business & Design
+    (r"\bsalesforce\b", "Salesforce"),
+    (r"\bcrm\b", "CRM"),
+    (r"\b(marketing automation|hubspot)\b", "Marketing Automation"),
+    (r"\bseo\b", "SEO"),
+    (r"\b(google analytics|ga4)\b", "Google Analytics"),
+    (r"\bfigma\b", "Figma"),
+    (r"\b(ui/ux|ux design|ui design)\b", "UI/UX"),
+    (r"\bcopywriting\b", "Copywriting"),
+    (r"\bproject management\b", "Project Management"),
+    (r"\bproduct management\b", "Product Management"),
 ]
 
 
@@ -360,28 +255,46 @@ def classify_category(category_raw: str, title: str, description: str) -> str:
 
 
 def extract_skills(raw_tags: list, title: str, description: str) -> list[str]:
+    """
+    Skill Priority:
+    1. Explicit source skills & tags
+    2. Extract from job description
+    3. Extract from title
+    Matched against controlled SKILL_PATTERNS with strict word boundaries.
+    """
     seen: set[str] = set()
     result: list[str] = []
 
-    # 1. Check explicit raw tags
+    # Priority 1 & 2: Explicit source tags
     for tag in raw_tags:
         clean = str(tag).strip().lower()
-        if clean in SKILL_EXPLICIT_MAP:
-            canonical = SKILL_EXPLICIT_MAP[clean]
-            if canonical.lower() not in seen:
+        for pattern, canonical in SKILL_PATTERNS:
+            if re.search(pattern, clean, re.IGNORECASE):
+                if canonical.lower() not in seen:
+                    seen.add(canonical.lower())
+                    result.append(canonical)
+
+    # Priority 3: Extract from job description
+    if description:
+        for pattern, canonical in SKILL_PATTERNS:
+            if len(result) >= 8:
+                break
+            if canonical.lower() in seen:
+                continue
+            if re.search(pattern, description, re.IGNORECASE):
                 seen.add(canonical.lower())
                 result.append(canonical)
 
-    # 2. Scan title and description
-    combined_text = f"{title} {description[:1500]}"
-    for pattern, canonical in SKILL_PATTERNS:
-        if len(result) >= 8:
-            break
-        if canonical.lower() in seen:
-            continue
-        if re.search(pattern, combined_text, re.IGNORECASE):
-            seen.add(canonical.lower())
-            result.append(canonical)
+    # Priority 4: Extract from job title
+    if title and len(result) < 8:
+        for pattern, canonical in SKILL_PATTERNS:
+            if len(result) >= 8:
+                break
+            if canonical.lower() in seen:
+                continue
+            if re.search(pattern, title, re.IGNORECASE):
+                seen.add(canonical.lower())
+                result.append(canonical)
 
     return result[:8]
 
@@ -603,7 +516,7 @@ async def sync_jobs() -> None:
     state["last_error"] = None
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Signal-Job-Ingestion/3.0)"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Signal-Job-Ingestion/3.1)"
     }
 
     results = await asyncio.gather(
@@ -707,7 +620,7 @@ async def sync() -> dict[str, Any]:
 
 @app.get("/api/jobs")
 async def get_jobs(
-    q: str | None = Query(default=None, description="Search query"),
+    q: str | None = Query(default=None, description="Search query across title, company, location, skills, category, description"),
     tags: str | None = Query(default=None, description="Comma-separated tags or skills"),
     source: str | None = Query(default=None, description="Source filter (RemoteOK, Jobicy, Remotive)"),
     location: str | None = Query(default=None, description="Location filter (India, Remote, Global, All)"),
@@ -750,7 +663,7 @@ async def get_jobs(
             if wanted_tags & {s.lower() for s in j.get("skills", []) + j.get("tags", [])}
         ]
 
-    # Query search
+    # Multi-field search across title, company, location, skills, category, description
     if q:
         needle = q.lower().strip()
         results = [
