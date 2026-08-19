@@ -155,58 +155,60 @@ export default function PipelineFlow({ sources, onRefresh }: PipelineFlowProps) 
         })}
       </div>
 
-      {/* Failure Simulation Bar (Dev / Interview Demo Control) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D9E2DC] pt-3 bg-[#F4F7F5] p-3 rounded-lg border">
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono font-bold text-[#12372A] uppercase">
-            🧪 INTERVIEW DEMO CONTROL:
-          </span>
-          <span className="text-[10px] font-mono text-[#66736C]">
-            Simulate source failures safely
-          </span>
+      {/* Failure Simulation Bar (Dev / Interview Demo Control) - Hidden in Production */}
+      {(import.meta.env.DEV || import.meta.env.MODE === 'development') && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D9E2DC] pt-3 bg-[#F4F7F5] p-3 rounded-lg border">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-mono font-bold text-[#12372A] uppercase">
+              🧪 INTERVIEW DEMO CONTROL:
+            </span>
+            <span className="text-[10px] font-mono text-[#66736C]">
+              Simulate source failures safely
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <select
+              value={selectedSource}
+              onChange={(e) => setSelectedSource(e.target.value)}
+              className="rounded border border-[#D9E2DC] bg-white px-2 py-1 font-bold text-[#17211C]"
+            >
+              <option value="Jobicy">Jobicy</option>
+              <option value="RemoteOK">RemoteOK</option>
+              <option value="Remotive">Remotive</option>
+            </select>
+
+            <select
+              value={failureType}
+              onChange={(e) => setFailureType(e.target.value)}
+              className="rounded border border-[#D9E2DC] bg-white px-2 py-1 font-bold text-[#17211C]"
+            >
+              <option value="timeout">Timeout</option>
+              <option value="http_error">HTTP 500 Error</option>
+              <option value="empty">Empty Response</option>
+              <option value="malformed">Malformed Payload</option>
+            </select>
+
+            <button
+              onClick={handleSimulate}
+              disabled={isSimulating}
+              className="inline-flex items-center gap-1 rounded bg-[#12372A] px-2.5 py-1 text-white font-bold hover:bg-[#1F6F54] transition-colors disabled:opacity-50"
+            >
+              <Play className="h-3 w-3 text-[#D6A84F]" />
+              Simulate
+            </button>
+
+            <button
+              onClick={handleResetAll}
+              disabled={isSimulating}
+              className="inline-flex items-center gap-1 rounded bg-[#E8EFEA] border border-[#D9E2DC] px-2.5 py-1 text-[#17211C] font-bold hover:bg-[#D9E2DC] transition-colors disabled:opacity-50"
+            >
+              <RotateCcw className="h-3 w-3 text-[#1F6F54]" />
+              Reset All
+            </button>
+          </div>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
-          <select
-            value={selectedSource}
-            onChange={(e) => setSelectedSource(e.target.value)}
-            className="rounded border border-[#D9E2DC] bg-white px-2 py-1 font-bold text-[#17211C]"
-          >
-            <option value="Jobicy">Jobicy</option>
-            <option value="RemoteOK">RemoteOK</option>
-            <option value="Remotive">Remotive</option>
-          </select>
-
-          <select
-            value={failureType}
-            onChange={(e) => setFailureType(e.target.value)}
-            className="rounded border border-[#D9E2DC] bg-white px-2 py-1 font-bold text-[#17211C]"
-          >
-            <option value="timeout">Timeout</option>
-            <option value="http_error">HTTP 500 Error</option>
-            <option value="empty">Empty Response</option>
-            <option value="malformed">Malformed Payload</option>
-          </select>
-
-          <button
-            onClick={handleSimulate}
-            disabled={isSimulating}
-            className="inline-flex items-center gap-1 rounded bg-[#12372A] px-2.5 py-1 text-white font-bold hover:bg-[#1F6F54] transition-colors disabled:opacity-50"
-          >
-            <Play className="h-3 w-3 text-[#D6A84F]" />
-            Simulate
-          </button>
-
-          <button
-            onClick={handleResetAll}
-            disabled={isSimulating}
-            className="inline-flex items-center gap-1 rounded bg-[#E8EFEA] border border-[#D9E2DC] px-2.5 py-1 text-[#17211C] font-bold hover:bg-[#D9E2DC] transition-colors disabled:opacity-50"
-          >
-            <RotateCcw className="h-3 w-3 text-[#1F6F54]" />
-            Reset All
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
