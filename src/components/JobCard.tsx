@@ -21,8 +21,8 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
     }
   };
 
-  const skills = job.tags || [];
-  const maxDisplaySkills = 4;
+  const skills = (job.skills && job.skills.length > 0) ? job.skills : (job.tags || []);
+  const maxDisplaySkills = 5;
   const visibleSkills = skills.slice(0, maxDisplaySkills);
   const remainingSkillCount = skills.length - maxDisplaySkills;
 
@@ -39,7 +39,7 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
               <img
                 src={job.logo}
                 alt=""
-                className="h-8 w-8 flex-shrink-0 rounded bg-neutral-50 object-cover border border-[#D9E2DC]"
+                className="h-8 w-8 flex-shrink-0 rounded bg-[#F4F7F5] object-cover border border-[#D9E2DC]"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
@@ -114,7 +114,7 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
               )}
             </div>
           ) : (
-            <p className="text-[11px] font-mono italic text-[#66736C]">Skills not provided</p>
+            <p className="text-[11px] font-mono italic text-[#66736C]">Skills not specified</p>
           )}
         </div>
 
@@ -122,7 +122,7 @@ export default function JobCard({ job, onSelect }: JobCardProps) {
         <div className="mt-3 text-[11px] font-mono text-[#66736C]">
           <span>Category: </span>
           <span className="font-bold text-[#17211C]">
-            {job.category || 'Engineering'}
+            {job.category || 'Other'}
           </span>
           {job.employment_type && (
             <span> · {job.employment_type}</span>

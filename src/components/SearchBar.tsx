@@ -42,13 +42,17 @@ export default function SearchBar({
   ];
 
   const categories = [
-    { id: 'All', label: 'All' },
+    { id: 'All', label: 'All Categories' },
     { id: 'Engineering', label: 'Engineering' },
+    { id: 'Data', label: 'Data' },
+    { id: 'DevOps / Cloud', label: 'DevOps / Cloud' },
     { id: 'Design', label: 'Design' },
     { id: 'Marketing', label: 'Marketing' },
     { id: 'Sales', label: 'Sales' },
     { id: 'Support', label: 'Support' },
-    { id: 'Data', label: 'Data' },
+    { id: 'Security', label: 'Security' },
+    { id: 'Product', label: 'Product' },
+    { id: 'Finance', label: 'Finance' },
   ];
 
   const sortOptions = [
@@ -66,7 +70,7 @@ export default function SearchBar({
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Search jobs, companies, skills..."
+          placeholder="Search jobs, companies, skills (e.g. React, Python, AWS, India)..."
           className="w-full rounded-lg border border-[#D9E2DC] bg-[#F4F7F5] py-2.5 pl-10 pr-9 text-sm text-[#17211C] placeholder-[#66736C] transition-colors focus:border-[#12372A] focus:bg-white focus:outline-none font-mono"
         />
         {value && (
@@ -79,9 +83,8 @@ export default function SearchBar({
         )}
       </div>
 
-      {/* Filter Row 1: Location & Category */}
+      {/* Location Filter Pills */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-t border-[#D9E2DC] pt-3">
-        {/* Location Filters */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="font-mono text-[#66736C] mr-1 text-[11px] font-bold uppercase">LOCATION:</span>
           {locations.map((loc) => (
@@ -99,45 +102,23 @@ export default function SearchBar({
           ))}
         </div>
 
-        {/* Category Filters */}
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-mono text-[#66736C] mr-1 text-[11px] font-bold uppercase">CATEGORY:</span>
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => onCategoryChange(cat.id)}
-              className={`rounded-md px-2.5 py-1 font-mono text-xs font-bold transition-all ${
-                categoryFilter === cat.id
-                  ? 'bg-[#12372A] text-white shadow-xs'
-                  : 'bg-[#E8EFEA] text-[#17211C] hover:bg-[#D9E2DC]'
-              }`}
+        {/* Source Dropdown & Sort */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[#66736C] text-[11px] font-bold uppercase">SOURCE:</span>
+            <select
+              value={sourceFilter}
+              onChange={(e) => onSourceChange(e.target.value)}
+              className="rounded-md border border-[#D9E2DC] bg-[#F4F7F5] px-2 py-1 font-mono text-xs font-bold text-[#17211C] focus:outline-none"
             >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
+              {sources.map((src) => (
+                <option key={src.id} value={src.id}>
+                  {src.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      {/* Filter Row 2: Source & Sort */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs border-t border-[#D9E2DC] pt-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="font-mono text-[#66736C] mr-1 text-[11px] font-bold uppercase">SOURCE:</span>
-          {sources.map((src) => (
-            <button
-              key={src.id}
-              onClick={() => onSourceChange(src.id)}
-              className={`rounded-md px-2.5 py-1 font-mono text-xs font-bold transition-all ${
-                sourceFilter === src.id
-                  ? 'bg-[#12372A] text-white shadow-xs'
-                  : 'bg-[#E8EFEA] text-[#17211C] hover:bg-[#D9E2DC]'
-              }`}
-            >
-              {src.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="font-mono text-[#66736C] text-[11px] font-bold uppercase">SORT:</span>
             <select
@@ -157,6 +138,24 @@ export default function SearchBar({
             {resultCount} LISTINGS
           </span>
         </div>
+      </div>
+
+      {/* Category Navigation Pills */}
+      <div className="flex flex-wrap items-center gap-1.5 border-t border-[#D9E2DC] pt-3 text-xs">
+        <span className="font-mono text-[#66736C] mr-1 text-[11px] font-bold uppercase">CATEGORY:</span>
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => onCategoryChange(cat.id)}
+            className={`rounded-md px-2.5 py-1 font-mono text-xs font-bold transition-all ${
+              categoryFilter === cat.id
+                ? 'bg-[#12372A] text-white shadow-xs'
+                : 'bg-[#E8EFEA] text-[#17211C] hover:bg-[#D9E2DC]'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
     </div>
   );

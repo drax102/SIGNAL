@@ -8,6 +8,7 @@ export interface Job {
   is_india?: boolean;
   category?: string;
   employment_type?: string;
+  skills: string[];
   tags: string[];
   url: string;
   logo: string;

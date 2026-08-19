@@ -1,4 +1,4 @@
-"""Signal - Multi-source job ingestion service with distinct category and skill tags."""
+"""Signal - Multi-source job intelligence service with skill extraction and category classification."""
 from __future__ import annotations
 
 import asyncio
@@ -18,7 +18,7 @@ REMOTIVE_URL = os.getenv("REMOTIVE_URL", "https://remotive.com/api/remote-jobs")
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 12.0
 
-app = FastAPI(title="Signal API", version="2.6.0")
+app = FastAPI(title="Signal API", version="3.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -62,6 +62,7 @@ FALLBACK_JOBS = [
         "is_india": True,
         "category": "Engineering",
         "employment_type": "Full-time",
+        "skills": ["React", "TypeScript", "Tailwind CSS", "REST API"],
         "tags": ["React", "TypeScript", "Tailwind CSS", "REST API"],
         "url": "https://remoteok.com/",
         "logo": "",
@@ -79,6 +80,7 @@ FALLBACK_JOBS = [
         "is_india": False,
         "category": "Engineering",
         "employment_type": "Full-time",
+        "skills": ["Python", "FastAPI", "Docker", "PostgreSQL", "AWS"],
         "tags": ["Python", "FastAPI", "Docker", "PostgreSQL", "AWS"],
         "url": "https://remotive.com/",
         "logo": "",
@@ -97,72 +99,209 @@ INDIA_KEYWORDS = {
     "maharashtra", "tamil", "nadu", "telangana", "kerala", "gujarat"
 }
 
-NON_SKILL_WORDS = {
-    "remote", "worldwide", "full time", "full_time", "part_time", "contract",
-    "freelance", "non tech", "non_tech", "senior", "junior", "lead", "manager",
-    "entry level", "mid level", "other", "all others", "full-time", "part-time",
-    "customer support", "dev", "finance", "admin", "exec", "ops", "medical",
-    "digital nomad", "education", "sys admin", "marketing", "sales", "design",
-    "legal", "engineering", "human resources", "recruiting", "recruitment",
-    "payroll", "accounting", "technical", "biotech"
-}
-
-SKILL_CANONICAL_MAP = {
+SKILL_EXPLICIT_MAP = {
+    # Programming Languages
+    "c++": "C++",
+    "cpp": "C++",
+    "c#": "C#",
+    "csharp": "C#",
+    "java": "Java",
+    "python": "Python",
+    "javascript": "JavaScript",
+    "js": "JavaScript",
+    "typescript": "TypeScript",
+    "ts": "TypeScript",
+    "golang": "Go",
+    "go": "Go",
+    "rust": "Rust",
+    "ruby": "Ruby",
+    "php": "PHP",
+    "scala": "Scala",
+    "kotlin": "Kotlin",
+    "swift": "Swift",
+    "sql": "SQL",
+    "html": "HTML",
+    "css": "CSS",
+    # Frontend
     "react": "React",
     "reactjs": "React",
     "react.js": "React",
-    "typescript": "TypeScript",
-    "javascript": "JavaScript",
-    "js": "JavaScript",
-    "python": "Python",
-    "fastapi": "FastAPI",
-    "aws": "AWS",
-    "docker": "Docker",
-    "kubernetes": "Kubernetes",
-    "k8s": "Kubernetes",
-    "node": "Node.js",
-    "nodejs": "Node.js",
+    "angular": "Angular",
+    "vue": "Vue.js",
+    "vuejs": "Vue.js",
+    "next.js": "Next.js",
+    "nextjs": "Next.js",
+    "svelte": "Svelte",
+    "tailwind": "Tailwind CSS",
+    "tailwindcss": "Tailwind CSS",
+    "bootstrap": "Bootstrap",
+    "redux": "Redux",
+    # Backend & Frameworks
     "node.js": "Node.js",
-    "sql": "SQL",
+    "nodejs": "Node.js",
+    "node": "Node.js",
+    "express": "Express.js",
+    "express.js": "Express.js",
+    "expressjs": "Express.js",
+    "fastapi": "FastAPI",
+    "django": "Django",
+    "flask": "Flask",
+    "spring boot": "Spring Boot",
+    "spring": "Spring Boot",
+    "rails": "Ruby on Rails",
+    "ruby on rails": "Ruby on Rails",
+    "graphql": "GraphQL",
+    "rest api": "REST API",
+    "restful": "REST API",
+    "grpc": "gRPC",
+    "microservices": "Microservices",
+    # Databases
     "postgresql": "PostgreSQL",
     "postgres": "PostgreSQL",
     "mysql": "MySQL",
     "mongodb": "MongoDB",
     "redis": "Redis",
-    "java": "Java",
-    "c++": "C++",
-    "cpp": "C++",
-    "c#": "C#",
-    "golang": "Go",
-    "go": "Go",
-    "rust": "Rust",
+    "elasticsearch": "Elasticsearch",
+    "sqlite": "SQLite",
+    "dynamodb": "DynamoDB",
+    "snowflake": "Snowflake",
+    # Cloud & DevOps
+    "aws": "AWS",
+    "amazon web services": "AWS",
+    "azure": "Azure",
+    "gcp": "GCP",
+    "google cloud": "GCP",
+    "docker": "Docker",
+    "kubernetes": "Kubernetes",
+    "k8s": "Kubernetes",
+    "terraform": "Terraform",
+    "ansible": "Ansible",
+    "jenkins": "Jenkins",
+    "ci/cd": "CI/CD",
+    "cicd": "CI/CD",
+    "linux": "Linux",
+    "git": "Git",
+    "github": "GitHub",
+    "gitlab": "GitLab",
+    # AI / ML / Data
+    "machine learning": "Machine Learning",
+    "deep learning": "Deep Learning",
+    "tensorflow": "TensorFlow",
+    "pytorch": "PyTorch",
+    "scikit-learn": "Scikit-Learn",
+    "pandas": "Pandas",
+    "numpy": "NumPy",
+    "data analysis": "Data Analysis",
+    "data analytics": "Data Analysis",
+    "power bi": "Power BI",
+    "powerbi": "Power BI",
+    "tableau": "Tableau",
+    "nlp": "NLP",
+    "ai/ml": "AI/ML",
+    # Design / Product / Business / Domain
     "figma": "Figma",
+    "ui/ux": "UI/UX",
+    "jira": "Jira",
+    "scrum": "Scrum",
+    "agile": "Agile",
     "salesforce": "Salesforce",
     "hubspot": "HubSpot",
     "crm": "CRM",
-    "django": "Django",
-    "flask": "Flask",
-    "graphql": "GraphQL",
-    "vue": "Vue.js",
-    "angular": "Angular",
-    "next.js": "Next.js",
-    "nextjs": "Next.js",
-    "tailwind": "Tailwind CSS",
-    "css": "CSS",
-    "html": "HTML",
-    "git": "Git",
-    "github": "GitHub",
-    "ci/cd": "CI/CD",
-    "gcp": "GCP",
-    "azure": "Azure",
-    "linux": "Linux",
-    "jira": "Jira",
-    "b2b": "B2B",
     "seo": "SEO",
-    "excel": "Excel",
+    "copywriting": "Copywriting",
+    "content strategy": "Content Strategy",
+    "graphic design": "Graphic Design",
+    "project management": "Project Management",
+    "product management": "Product Management",
+    "account management": "Account Management",
+    "customer support": "Customer Support",
+    "b2b": "B2B",
+    # Security & QA
+    "cybersecurity": "Cybersecurity",
+    "information security": "Cybersecurity",
+    "networking": "Networking",
+    "selenium": "Selenium",
+    "testing": "Testing",
+    "playwright": "Playwright",
+    "cypress": "Cypress",
+    "qa": "QA",
 }
 
-KNOWN_SKILLS_KEYWORDS = list(SKILL_CANONICAL_MAP.values())
+SKILL_PATTERNS = [
+    (r"\b(c\+\+|cpp)\b", "C++"),
+    (r"\b(c#|csharp)\b", "C#"),
+    (r"\b(python)\b", "Python"),
+    (r"\b(java)\b", "Java"),
+    (r"\b(typescript|ts)\b", "TypeScript"),
+    (r"\b(javascript|js)\b", "JavaScript"),
+    (r"\b(golang)\b", "Go"),
+    (r"\b(rust)\b", "Rust"),
+    (r"\b(ruby)\b", "Ruby"),
+    (r"\b(php)\b", "PHP"),
+    (r"\b(scala)\b", "Scala"),
+    (r"\b(kotlin)\b", "Kotlin"),
+    (r"\b(swift)\b", "Swift"),
+    (r"\b(sql)\b", "SQL"),
+    (r"\b(html)\b", "HTML"),
+    (r"\b(css)\b", "CSS"),
+    (r"\b(react|reactjs|react\.js)\b", "React"),
+    (r"\b(angular|angularjs)\b", "Angular"),
+    (r"\b(vue|vuejs|vue\.js)\b", "Vue.js"),
+    (r"\b(next\.js|nextjs)\b", "Next.js"),
+    (r"\b(tailwind|tailwindcss)\b", "Tailwind CSS"),
+    (r"\b(node|nodejs|node\.js)\b", "Node.js"),
+    (r"\b(express\.js|expressjs)\b", "Express.js"),
+    (r"\b(fastapi)\b", "FastAPI"),
+    (r"\b(django)\b", "Django"),
+    (r"\b(flask)\b", "Flask"),
+    (r"\b(spring boot|spring)\b", "Spring Boot"),
+    (r"\b(rails|ruby on rails)\b", "Ruby on Rails"),
+    (r"\b(graphql)\b", "GraphQL"),
+    (r"\b(rest api|restful)\b", "REST API"),
+    (r"\b(postgresql|postgres)\b", "PostgreSQL"),
+    (r"\b(mysql)\b", "MySQL"),
+    (r"\b(mongodb|mongo)\b", "MongoDB"),
+    (r"\b(redis)\b", "Redis"),
+    (r"\b(elasticsearch)\b", "Elasticsearch"),
+    (r"\b(aws|amazon web services)\b", "AWS"),
+    (r"\b(azure)\b", "Azure"),
+    (r"\b(gcp|google cloud)\b", "GCP"),
+    (r"\b(docker)\b", "Docker"),
+    (r"\b(kubernetes|k8s)\b", "Kubernetes"),
+    (r"\b(terraform)\b", "Terraform"),
+    (r"\b(ansible)\b", "Ansible"),
+    (r"\b(jenkins)\b", "Jenkins"),
+    (r"\b(ci/cd|cicd)\b", "CI/CD"),
+    (r"\b(linux)\b", "Linux"),
+    (r"\b(git)\b", "Git"),
+    (r"\b(github)\b", "GitHub"),
+    (r"\b(gitlab)\b", "GitLab"),
+    (r"\b(machine learning)\b", "Machine Learning"),
+    (r"\b(deep learning)\b", "Deep Learning"),
+    (r"\b(tensorflow)\b", "TensorFlow"),
+    (r"\b(pytorch)\b", "PyTorch"),
+    (r"\b(pandas)\b", "Pandas"),
+    (r"\b(numpy)\b", "NumPy"),
+    (r"\b(data analysis|data analytics)\b", "Data Analysis"),
+    (r"\b(power bi|powerbi)\b", "Power BI"),
+    (r"\b(tableau)\b", "Tableau"),
+    (r"\b(figma)\b", "Figma"),
+    (r"\b(ui/ux)\b", "UI/UX"),
+    (r"\b(salesforce)\b", "Salesforce"),
+    (r"\b(hubspot)\b", "HubSpot"),
+    (r"\b(crm)\b", "CRM"),
+    (r"\b(seo)\b", "SEO"),
+    (r"\b(account management)\b", "Account Management"),
+    (r"\b(customer support|customer service)\b", "Customer Support"),
+    (r"\b(project management)\b", "Project Management"),
+    (r"\b(product management)\b", "Product Management"),
+    (r"\b(copywriting)\b", "Copywriting"),
+    (r"\b(b2b)\b", "B2B"),
+    (r"\b(cybersecurity|security)\b", "Cybersecurity"),
+    (r"\b(networking)\b", "Networking"),
+    (r"\b(selenium)\b", "Selenium"),
+    (r"\b(testing|qa)\b", "Testing"),
+]
 
 
 def is_india_job(location: str, title: str = "") -> bool:
@@ -187,37 +326,64 @@ def clean_html(raw_html: str) -> str:
     return " ".join(clean.split())
 
 
-def classify_category(category_raw: str, title: str, tags: list[str]) -> str:
+def classify_category(category_raw: str, title: str, description: str) -> str:
     title_lower = title.lower()
     cat_lower = (category_raw or "").lower()
+    title_cat = f"{title_lower} {cat_lower}"
 
-    if any(k in title_lower for k in ["engineer", "developer", "software", "frontend", "backend", "fullstack", "devops", "qa", "architect", "programmer", "tech lead"]):
-        return "Engineering"
-    if any(k in title_lower for k in ["design", "ui", "ux", "graphic", "art", "animator", "creative"]):
-        return "Design"
-    if any(k in title_lower for k in ["marketing", "seo", "growth", "content", "copywriter", "social media", "brand"]):
-        return "Marketing"
-    if any(k in title_lower for k in ["sales", "account executive", "business development", "sdr", "account manager"]):
-        return "Sales"
-    if any(k in title_lower for k in ["support", "customer service", "helpdesk", "patient care", "client success", "customer experience"]):
-        return "Support"
-    if any(k in title_lower for k in ["data analyst", "data engineer", "data scientist", "analytics", "machine learning", "ai engineer"]):
+    if any(k in title_cat for k in ["devops", "cloud", "kubernetes", "terraform", "aws", "docker", "sysadmin", "infrastructure", "sre"]):
+        return "DevOps / Cloud"
+    if any(k in title_cat for k in ["security", "cybersecurity", "infosec", "penetration"]):
+        return "Security"
+    if any(k in title_cat for k in ["data engineer", "data science", "data analyst", "analytics", "machine learning", "ai engineer", "power bi"]):
         return "Data"
-
-    if any(k in cat_lower for k in ["software", "engineering", "dev", "tech"]):
-        return "Engineering"
-    if "design" in cat_lower:
+    if any(k in title_cat for k in ["product manager", "product owner", "scrum master"]):
+        return "Product"
+    if any(k in title_cat for k in ["design", "ui/ux", "ux designer", "graphic", "figma", "animator"]):
         return "Design"
-    if "marketing" in cat_lower:
+    if any(k in title_cat for k in ["marketing", "seo", "growth", "content", "copywriter", "social media", "brand"]):
         return "Marketing"
-    if "sales" in cat_lower:
+    if any(k in title_cat for k in ["sales", "account executive", "business development", "sdr", "account manager"]):
         return "Sales"
-    if "support" in cat_lower or "customer" in cat_lower:
+    if any(k in title_cat for k in ["support", "customer service", "helpdesk", "patient care", "client success"]):
         return "Support"
-    if "data" in cat_lower:
-        return "Data"
+    if any(k in title_cat for k in ["finance", "accounting", "bookkeeper", "payroll", "financial"]):
+        return "Finance"
+    if any(k in title_cat for k in ["engineer", "developer", "software", "frontend", "backend", "fullstack", "qa", "programmer", "react", "python", "java", "node"]):
+        return "Engineering"
 
-    return "Engineering"
+    desc_lower = (description or "")[:300].lower()
+    if any(k in desc_lower for k in ["software engineer", "full stack", "frontend developer", "backend developer", "python developer"]):
+        return "Engineering"
+
+    return "Other"
+
+
+def extract_skills(raw_tags: list, title: str, description: str) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+
+    # 1. Check explicit raw tags
+    for tag in raw_tags:
+        clean = str(tag).strip().lower()
+        if clean in SKILL_EXPLICIT_MAP:
+            canonical = SKILL_EXPLICIT_MAP[clean]
+            if canonical.lower() not in seen:
+                seen.add(canonical.lower())
+                result.append(canonical)
+
+    # 2. Scan title and description
+    combined_text = f"{title} {description[:1500]}"
+    for pattern, canonical in SKILL_PATTERNS:
+        if len(result) >= 8:
+            break
+        if canonical.lower() in seen:
+            continue
+        if re.search(pattern, combined_text, re.IGNORECASE):
+            seen.add(canonical.lower())
+            result.append(canonical)
+
+    return result[:8]
 
 
 def normalize_employment_type(raw_type: str) -> str:
@@ -233,35 +399,6 @@ def normalize_employment_type(raw_type: str) -> str:
     if "freelance" in t:
         return "Freelance"
     return str(raw_type).strip().title()
-
-
-def clean_and_normalize_tags(raw_tags: list[str], title: str = "", description: str = "") -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-
-    for item in raw_tags:
-        clean = str(item).replace("&amp;", "&").strip()
-        clean_lower = clean.lower()
-        if not clean or clean_lower in NON_SKILL_WORDS or len(clean) > 25:
-            continue
-        
-        canonical = SKILL_CANONICAL_MAP.get(clean_lower, clean.title() if len(clean) <= 15 else clean)
-        if canonical.lower() not in seen:
-            seen.add(canonical.lower())
-            result.append(canonical)
-
-    # Extract explicitly mentioned tech/tool skills from title and description if tags are sparse
-    search_text = f"{title} {description[:500]}"
-    for skill in KNOWN_SKILLS_KEYWORDS:
-        if len(result) >= 6:
-            break
-        if skill.lower() not in seen:
-            pattern = r"\b" + re.escape(skill) + r"\b"
-            if re.search(pattern, search_text, re.IGNORECASE):
-                seen.add(skill.lower())
-                result.append(skill)
-
-    return result[:6]
 
 
 def normalize_remoteok(raw: dict[str, Any]) -> dict[str, Any] | None:
@@ -283,8 +420,8 @@ def normalize_remoteok(raw: dict[str, Any]) -> dict[str, Any] | None:
 
     raw_tags = [str(x) for x in (raw.get("tags") or []) if str(x).strip()]
     description = clean_html(raw.get("description") or "")
-    tags = clean_and_normalize_tags(raw_tags, title, description)
-    category = classify_category("", title, tags)
+    skills = extract_skills(raw_tags, title, description)
+    category = classify_category("", title, description)
 
     return {
         "id": f"remoteok-{job_id}",
@@ -296,7 +433,8 @@ def normalize_remoteok(raw: dict[str, Any]) -> dict[str, Any] | None:
         "is_india": is_india_job(location, title),
         "category": category,
         "employment_type": "Full-time",
-        "tags": tags,
+        "skills": skills,
+        "tags": skills,
         "url": url,
         "logo": raw.get("company_logo") or raw.get("logo") or "",
         "salary": salary,
@@ -327,7 +465,6 @@ def normalize_jobicy(raw: dict[str, Any]) -> dict[str, Any] | None:
     if isinstance(industry_list, str):
         industry_list = [industry_list]
     raw_cat = industry_list[0] if industry_list else ""
-    category = classify_category(str(raw_cat), title, [])
 
     type_list = raw.get("jobType") or []
     if isinstance(type_list, str):
@@ -336,7 +473,8 @@ def normalize_jobicy(raw: dict[str, Any]) -> dict[str, Any] | None:
     employment_type = normalize_employment_type(str(raw_type))
 
     description = clean_html(raw.get("jobExcerpt") or raw.get("jobDescription") or "")
-    tags = clean_and_normalize_tags([], title, description)
+    skills = extract_skills([], title, description)
+    category = classify_category(str(raw_cat), title, description)
 
     return {
         "id": f"jobicy-{job_id}",
@@ -348,7 +486,8 @@ def normalize_jobicy(raw: dict[str, Any]) -> dict[str, Any] | None:
         "is_india": is_india_job(location, title),
         "category": category,
         "employment_type": employment_type,
-        "tags": tags,
+        "skills": skills,
+        "tags": skills,
         "url": url,
         "logo": raw.get("companyLogo") or "",
         "salary": salary,
@@ -374,8 +513,8 @@ def normalize_remotive(raw: dict[str, Any]) -> dict[str, Any] | None:
         raw_tags = [raw_tags]
 
     description = clean_html(raw.get("description") or "")
-    tags = clean_and_normalize_tags(raw_tags, title, description)
-    category = classify_category(str(raw_cat), title, tags)
+    skills = extract_skills(raw_tags, title, description)
+    category = classify_category(str(raw_cat), title, description)
     employment_type = normalize_employment_type(raw.get("job_type") or "full_time")
 
     return {
@@ -388,7 +527,8 @@ def normalize_remotive(raw: dict[str, Any]) -> dict[str, Any] | None:
         "is_india": is_india_job(location, title),
         "category": category,
         "employment_type": employment_type,
-        "tags": tags,
+        "skills": skills,
+        "tags": skills,
         "url": url,
         "logo": raw.get("company_logo") or "",
         "salary": salary,
@@ -463,7 +603,7 @@ async def sync_jobs() -> None:
     state["last_error"] = None
 
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Signal-Job-Ingestion/2.6)"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Signal-Job-Ingestion/3.0)"
     }
 
     results = await asyncio.gather(
@@ -487,13 +627,14 @@ async def sync_jobs() -> None:
         total_fetched += fetched_count
         total_rejected += rejected_count
 
-        if err is None:
+        if err is None and valid_jobs:
             sources_status[name] = "healthy"
             by_source_counts[name] = len(valid_jobs)
             all_valid_jobs.extend(valid_jobs)
         else:
             sources_status[name] = "degraded"
-            failed_sources.append(f"{name}: {err}")
+            if err:
+                failed_sources.append(f"{name}: {err}")
 
     deduped = deduplicate_jobs(all_valid_jobs)
 
@@ -567,10 +708,10 @@ async def sync() -> dict[str, Any]:
 @app.get("/api/jobs")
 async def get_jobs(
     q: str | None = Query(default=None, description="Search query"),
-    tags: str | None = Query(default=None, description="Comma-separated tags"),
+    tags: str | None = Query(default=None, description="Comma-separated tags or skills"),
     source: str | None = Query(default=None, description="Source filter (RemoteOK, Jobicy, Remotive)"),
     location: str | None = Query(default=None, description="Location filter (India, Remote, Global, All)"),
-    category: str | None = Query(default=None, description="Category filter (Engineering, Design, Marketing, Support, All)"),
+    category: str | None = Query(default=None, description="Category filter (Engineering, Data, DevOps / Cloud, Design, Marketing, Sales, Support, Security, Product, Finance, All)"),
     limit: int = Query(default=200, ge=1, le=500),
 ) -> dict[str, Any]:
     results = list(state["jobs"])
@@ -581,7 +722,7 @@ async def get_jobs(
         results = [j for j in results if j.get("source", "").lower() == s_wanted]
 
     # Location filter
-    if location and location.lower() != "all":
+    if location and location.lower() not in ["all", "all jobs"]:
         loc_wanted = location.lower().strip()
         if loc_wanted == "india":
             results = [j for j in results if j.get("is_india")]
@@ -601,12 +742,12 @@ async def get_jobs(
             if cat_wanted in j.get("category", "").lower()
         ]
 
-    # Tag filter
+    # Tag / Skill filter
     if tags:
         wanted_tags = {t.strip().lower() for t in tags.split(",") if t.strip()}
         results = [
             j for j in results
-            if wanted_tags & {t.lower() for t in j.get("tags", [])}
+            if wanted_tags & {s.lower() for s in j.get("skills", []) + j.get("tags", [])}
         ]
 
     # Query search
@@ -619,7 +760,7 @@ async def get_jobs(
             or needle in j.get("location", "").lower()
             or needle in j.get("description", "").lower()
             or needle in j.get("category", "").lower()
-            or any(needle in t.lower() for t in j.get("tags", []))
+            or any(needle in s.lower() for s in j.get("skills", []) + j.get("tags", []))
         ]
 
     sliced = results[:limit]

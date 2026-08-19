@@ -10,7 +10,7 @@ interface JobDetailDrawerProps {
 export default function JobDetailDrawer({ job, onClose }: JobDetailDrawerProps) {
   if (!job) return null;
 
-  const skills = job.tags || [];
+  const skills = (job.skills && job.skills.length > 0) ? job.skills : (job.tags || []);
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-[#17211C]/50 backdrop-blur-xs flex justify-end">
@@ -87,7 +87,7 @@ export default function JobDetailDrawer({ job, onClose }: JobDetailDrawerProps) 
               <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Category</span>
               <span className="font-bold text-[#17211C] flex items-center gap-1 mt-0.5">
                 <Layers className="h-3.5 w-3.5 text-[#1F6F54]" />
-                {job.category || 'Engineering'}
+                {job.category || 'Other'}
               </span>
             </div>
             <div>
@@ -132,7 +132,7 @@ export default function JobDetailDrawer({ job, onClose }: JobDetailDrawerProps) 
                 ))}
               </div>
             ) : (
-              <p className="text-xs font-mono italic text-[#66736C]">Skills not provided</p>
+              <p className="text-xs font-mono italic text-[#66736C]">Skills not specified</p>
             )}
           </div>
 
