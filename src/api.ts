@@ -18,6 +18,7 @@ export function fetchJobs(params: {
   tags?: string;
   source?: string;
   location?: string;
+  category?: string;
   limit?: number;
 }): Promise<Job[]> {
   const search = new URLSearchParams();
@@ -25,6 +26,7 @@ export function fetchJobs(params: {
   if (params.tags) search.set('tags', params.tags);
   if (params.source) search.set('source', params.source);
   if (params.location) search.set('location', params.location);
+  if (params.category) search.set('category', params.category);
   if (params.limit) search.set('limit', String(params.limit));
   return request<JobsResponse>(`/jobs?${search.toString()}`).then((data) => data.jobs || []);
 }

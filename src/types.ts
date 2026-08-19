@@ -6,6 +6,8 @@ export interface Job {
   location: string;
   remote: boolean;
   is_india?: boolean;
+  category?: string;
+  employment_type?: string;
   tags: string[];
   url: string;
   logo: string;

@@ -1,4 +1,4 @@
-"""Signal - Multi-source job ingestion service."""
+"""Signal - Multi-source job ingestion service with distinct category and skill tags."""
 from __future__ import annotations
 
 import asyncio
@@ -18,7 +18,7 @@ REMOTIVE_URL = os.getenv("REMOTIVE_URL", "https://remotive.com/api/remote-jobs")
 MAX_RETRIES = 3
 REQUEST_TIMEOUT = 12.0
 
-app = FastAPI(title="Signal API", version="2.5.0")
+app = FastAPI(title="Signal API", version="2.6.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -60,7 +60,9 @@ FALLBACK_JOBS = [
         "location": "Bengaluru, India · Remote",
         "remote": True,
         "is_india": True,
-        "tags": ["React", "TypeScript", "TailwindCSS"],
+        "category": "Engineering",
+        "employment_type": "Full-time",
+        "tags": ["React", "TypeScript", "Tailwind CSS", "REST API"],
         "url": "https://remoteok.com/",
         "logo": "",
         "salary": "$80,000 - $120,000",
@@ -75,7 +77,9 @@ FALLBACK_JOBS = [
         "location": "Worldwide · Remote",
         "remote": True,
         "is_india": False,
-        "tags": ["Python", "FastAPI", "AsyncIO"],
+        "category": "Engineering",
+        "employment_type": "Full-time",
+        "tags": ["Python", "FastAPI", "Docker", "PostgreSQL", "AWS"],
         "url": "https://remotive.com/",
         "logo": "",
         "salary": "$100,000 - $140,000",
@@ -93,11 +97,76 @@ INDIA_KEYWORDS = {
     "maharashtra", "tamil", "nadu", "telangana", "kerala", "gujarat"
 }
 
+NON_SKILL_WORDS = {
+    "remote", "worldwide", "full time", "full_time", "part_time", "contract",
+    "freelance", "non tech", "non_tech", "senior", "junior", "lead", "manager",
+    "entry level", "mid level", "other", "all others", "full-time", "part-time",
+    "customer support", "dev", "finance", "admin", "exec", "ops", "medical",
+    "digital nomad", "education", "sys admin", "marketing", "sales", "design",
+    "legal", "engineering", "human resources", "recruiting", "recruitment",
+    "payroll", "accounting", "technical", "biotech"
+}
+
+SKILL_CANONICAL_MAP = {
+    "react": "React",
+    "reactjs": "React",
+    "react.js": "React",
+    "typescript": "TypeScript",
+    "javascript": "JavaScript",
+    "js": "JavaScript",
+    "python": "Python",
+    "fastapi": "FastAPI",
+    "aws": "AWS",
+    "docker": "Docker",
+    "kubernetes": "Kubernetes",
+    "k8s": "Kubernetes",
+    "node": "Node.js",
+    "nodejs": "Node.js",
+    "node.js": "Node.js",
+    "sql": "SQL",
+    "postgresql": "PostgreSQL",
+    "postgres": "PostgreSQL",
+    "mysql": "MySQL",
+    "mongodb": "MongoDB",
+    "redis": "Redis",
+    "java": "Java",
+    "c++": "C++",
+    "cpp": "C++",
+    "c#": "C#",
+    "golang": "Go",
+    "go": "Go",
+    "rust": "Rust",
+    "figma": "Figma",
+    "salesforce": "Salesforce",
+    "hubspot": "HubSpot",
+    "crm": "CRM",
+    "django": "Django",
+    "flask": "Flask",
+    "graphql": "GraphQL",
+    "vue": "Vue.js",
+    "angular": "Angular",
+    "next.js": "Next.js",
+    "nextjs": "Next.js",
+    "tailwind": "Tailwind CSS",
+    "css": "CSS",
+    "html": "HTML",
+    "git": "Git",
+    "github": "GitHub",
+    "ci/cd": "CI/CD",
+    "gcp": "GCP",
+    "azure": "Azure",
+    "linux": "Linux",
+    "jira": "Jira",
+    "b2b": "B2B",
+    "seo": "SEO",
+    "excel": "Excel",
+}
+
+KNOWN_SKILLS_KEYWORDS = list(SKILL_CANONICAL_MAP.values())
+
 
 def is_india_job(location: str, title: str = "") -> bool:
-    loc_clean = (location or "").lower()
-    title_clean = (title or "").lower()
-    text = f"{loc_clean} {title_clean}"
+    text = f"{location or ''} {title or ''}".lower()
     tokens = set(re.findall(r"\b\w+\b", text))
     return bool(INDIA_KEYWORDS & tokens)
 
@@ -118,6 +187,83 @@ def clean_html(raw_html: str) -> str:
     return " ".join(clean.split())
 
 
+def classify_category(category_raw: str, title: str, tags: list[str]) -> str:
+    title_lower = title.lower()
+    cat_lower = (category_raw or "").lower()
+
+    if any(k in title_lower for k in ["engineer", "developer", "software", "frontend", "backend", "fullstack", "devops", "qa", "architect", "programmer", "tech lead"]):
+        return "Engineering"
+    if any(k in title_lower for k in ["design", "ui", "ux", "graphic", "art", "animator", "creative"]):
+        return "Design"
+    if any(k in title_lower for k in ["marketing", "seo", "growth", "content", "copywriter", "social media", "brand"]):
+        return "Marketing"
+    if any(k in title_lower for k in ["sales", "account executive", "business development", "sdr", "account manager"]):
+        return "Sales"
+    if any(k in title_lower for k in ["support", "customer service", "helpdesk", "patient care", "client success", "customer experience"]):
+        return "Support"
+    if any(k in title_lower for k in ["data analyst", "data engineer", "data scientist", "analytics", "machine learning", "ai engineer"]):
+        return "Data"
+
+    if any(k in cat_lower for k in ["software", "engineering", "dev", "tech"]):
+        return "Engineering"
+    if "design" in cat_lower:
+        return "Design"
+    if "marketing" in cat_lower:
+        return "Marketing"
+    if "sales" in cat_lower:
+        return "Sales"
+    if "support" in cat_lower or "customer" in cat_lower:
+        return "Support"
+    if "data" in cat_lower:
+        return "Data"
+
+    return "Engineering"
+
+
+def normalize_employment_type(raw_type: str) -> str:
+    if not raw_type:
+        return "Full-time"
+    t = str(raw_type).lower()
+    if "full" in t:
+        return "Full-time"
+    if "contract" in t:
+        return "Contract"
+    if "part" in t:
+        return "Part-time"
+    if "freelance" in t:
+        return "Freelance"
+    return str(raw_type).strip().title()
+
+
+def clean_and_normalize_tags(raw_tags: list[str], title: str = "", description: str = "") -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+
+    for item in raw_tags:
+        clean = str(item).replace("&amp;", "&").strip()
+        clean_lower = clean.lower()
+        if not clean or clean_lower in NON_SKILL_WORDS or len(clean) > 25:
+            continue
+        
+        canonical = SKILL_CANONICAL_MAP.get(clean_lower, clean.title() if len(clean) <= 15 else clean)
+        if canonical.lower() not in seen:
+            seen.add(canonical.lower())
+            result.append(canonical)
+
+    # Extract explicitly mentioned tech/tool skills from title and description if tags are sparse
+    search_text = f"{title} {description[:500]}"
+    for skill in KNOWN_SKILLS_KEYWORDS:
+        if len(result) >= 6:
+            break
+        if skill.lower() not in seen:
+            pattern = r"\b" + re.escape(skill) + r"\b"
+            if re.search(pattern, search_text, re.IGNORECASE):
+                seen.add(skill.lower())
+                result.append(skill)
+
+    return result[:6]
+
+
 def normalize_remoteok(raw: dict[str, Any]) -> dict[str, Any] | None:
     job_id = str(raw.get("id") or "").strip()
     title = (raw.get("position") or "").strip()
@@ -135,7 +281,10 @@ def normalize_remoteok(raw: dict[str, Any]) -> dict[str, Any] | None:
     elif raw.get("salary"):
         salary = str(raw.get("salary")).strip()
 
-    tags = [str(x).strip() for x in (raw.get("tags") or []) if str(x).strip()]
+    raw_tags = [str(x) for x in (raw.get("tags") or []) if str(x).strip()]
+    description = clean_html(raw.get("description") or "")
+    tags = clean_and_normalize_tags(raw_tags, title, description)
+    category = classify_category("", title, tags)
 
     return {
         "id": f"remoteok-{job_id}",
@@ -145,12 +294,14 @@ def normalize_remoteok(raw: dict[str, Any]) -> dict[str, Any] | None:
         "location": location or "Remote",
         "remote": is_remote_job(location),
         "is_india": is_india_job(location, title),
-        "tags": tags[:8],
+        "category": category,
+        "employment_type": "Full-time",
+        "tags": tags,
         "url": url,
         "logo": raw.get("company_logo") or raw.get("logo") or "",
         "salary": salary,
         "posted": raw.get("date") or "",
-        "description": clean_html(raw.get("description") or ""),
+        "description": description,
     }
 
 
@@ -163,8 +314,8 @@ def normalize_jobicy(raw: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     location = (raw.get("jobGeo") or "Remote").strip()
-    salary_min = raw.get("annualSalaryMin")
-    salary_max = raw.get("annualSalaryMax")
+    salary_min = raw.get("salaryMin") or raw.get("annualSalaryMin")
+    salary_max = raw.get("salaryMax") or raw.get("annualSalaryMax")
     currency = raw.get("salaryCurrency") or "USD"
     salary = ""
     if salary_min and salary_max:
@@ -172,13 +323,20 @@ def normalize_jobicy(raw: dict[str, Any]) -> dict[str, Any] | None:
     elif salary_min:
         salary = f"{currency} {int(salary_min):,}"
 
-    industry = raw.get("jobIndustry") or []
-    job_type = raw.get("jobType") or []
-    if isinstance(industry, str):
-        industry = [industry]
-    if isinstance(job_type, str):
-        job_type = [job_type]
-    tags = [str(t).replace("&amp;", "&").strip() for t in (industry + job_type) if str(t).strip()]
+    industry_list = raw.get("jobIndustry") or []
+    if isinstance(industry_list, str):
+        industry_list = [industry_list]
+    raw_cat = industry_list[0] if industry_list else ""
+    category = classify_category(str(raw_cat), title, [])
+
+    type_list = raw.get("jobType") or []
+    if isinstance(type_list, str):
+        type_list = [type_list]
+    raw_type = type_list[0] if type_list else "Full-Time"
+    employment_type = normalize_employment_type(str(raw_type))
+
+    description = clean_html(raw.get("jobExcerpt") or raw.get("jobDescription") or "")
+    tags = clean_and_normalize_tags([], title, description)
 
     return {
         "id": f"jobicy-{job_id}",
@@ -188,12 +346,14 @@ def normalize_jobicy(raw: dict[str, Any]) -> dict[str, Any] | None:
         "location": location or "Remote",
         "remote": is_remote_job(location),
         "is_india": is_india_job(location, title),
-        "tags": tags[:8],
+        "category": category,
+        "employment_type": employment_type,
+        "tags": tags,
         "url": url,
         "logo": raw.get("companyLogo") or "",
         "salary": salary,
         "posted": raw.get("pubDate") or "",
-        "description": clean_html(raw.get("jobExcerpt") or raw.get("jobDescription") or ""),
+        "description": description,
     }
 
 
@@ -208,11 +368,15 @@ def normalize_remotive(raw: dict[str, Any]) -> dict[str, Any] | None:
     location = (raw.get("candidate_required_location") or "Worldwide").strip()
     salary = (raw.get("salary") or "").strip()
 
-    category = [raw.get("category")] if raw.get("category") else []
+    raw_cat = raw.get("category") or ""
     raw_tags = raw.get("tags") or []
     if isinstance(raw_tags, str):
         raw_tags = [raw_tags]
-    tags = [str(t).strip() for t in (category + raw_tags) if str(t).strip()]
+
+    description = clean_html(raw.get("description") or "")
+    tags = clean_and_normalize_tags(raw_tags, title, description)
+    category = classify_category(str(raw_cat), title, tags)
+    employment_type = normalize_employment_type(raw.get("job_type") or "full_time")
 
     return {
         "id": f"remotive-{job_id}",
@@ -222,12 +386,14 @@ def normalize_remotive(raw: dict[str, Any]) -> dict[str, Any] | None:
         "location": location or "Worldwide",
         "remote": is_remote_job(location),
         "is_india": is_india_job(location, title),
-        "tags": tags[:8],
+        "category": category,
+        "employment_type": employment_type,
+        "tags": tags,
         "url": url,
         "logo": raw.get("company_logo") or "",
         "salary": salary,
         "posted": raw.get("publication_date") or "",
-        "description": clean_html(raw.get("description") or ""),
+        "description": description,
     }
 
 
@@ -241,7 +407,7 @@ async def fetch_source_api(
                 res = await client.get(url, headers=headers)
                 res.raise_for_status()
                 payload = res.json()
-                
+
                 raw_items: list[dict[str, Any]] = []
                 if name == "RemoteOK":
                     raw_items = payload[1:] if isinstance(payload, list) else payload.get("jobs", [])
@@ -276,10 +442,7 @@ def deduplicate_jobs(jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     unique_jobs: list[dict[str, Any]] = []
 
     for job in jobs:
-        # Standardize URL
         url_clean = re.sub(r"https?://(www\.)?", "", job["url"].lower().rstrip("/"))
-        
-        # Standardize Signature: company + title + location
         comp_clean = re.sub(r"\W+", "", job["company"].lower())
         title_clean = re.sub(r"\W+", "", job["title"].lower())
         loc_clean = re.sub(r"\W+", "", job["location"].lower())
@@ -299,7 +462,9 @@ async def sync_jobs() -> None:
     state["last_attempt"] = datetime.now(timezone.utc).isoformat()
     state["last_error"] = None
 
-    headers = {"User-Agent": "Signal-Job-Ingestion/2.5 (multi-source challenge demo)"}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (Signal-Job-Ingestion/2.6)"
+    }
 
     results = await asyncio.gather(
         fetch_source_api("RemoteOK", REMOTEOK_URL, headers, normalize_remoteok),
@@ -340,7 +505,6 @@ async def sync_jobs() -> None:
         if failed_sources:
             state["last_error"] = "; ".join(failed_sources)
     else:
-        # Fallback mode if no live jobs could be fetched from any provider
         state["status"] = "degraded"
         state["mode"] = "fallback"
         state["last_error"] = "; ".join(failed_sources) if failed_sources else "All job sources returned 0 records"
@@ -348,7 +512,6 @@ async def sync_jobs() -> None:
             state["jobs"] = FALLBACK_JOBS
             by_source_counts = {"Local fallback": len(FALLBACK_JOBS)}
 
-    # Recalculate metrics
     india_count = sum(1 for j in state["jobs"] if j.get("is_india"))
     remote_count = sum(1 for j in state["jobs"] if j.get("remote"))
 
@@ -407,12 +570,13 @@ async def get_jobs(
     tags: str | None = Query(default=None, description="Comma-separated tags"),
     source: str | None = Query(default=None, description="Source filter (RemoteOK, Jobicy, Remotive)"),
     location: str | None = Query(default=None, description="Location filter (India, Remote, Global, All)"),
+    category: str | None = Query(default=None, description="Category filter (Engineering, Design, Marketing, Support, All)"),
     limit: int = Query(default=200, ge=1, le=500),
 ) -> dict[str, Any]:
     results = list(state["jobs"])
 
     # Source filter
-    if source and source.lower() != "all" and source.lower() != "all sources":
+    if source and source.lower() not in ["all", "all sources"]:
         s_wanted = source.lower().strip()
         results = [j for j in results if j.get("source", "").lower() == s_wanted]
 
@@ -428,6 +592,14 @@ async def get_jobs(
                 j for j in results
                 if any(w in j.get("location", "").lower() for w in ["worldwide", "global", "anywhere"])
             ]
+
+    # Category filter
+    if category and category.lower() != "all":
+        cat_wanted = category.lower().strip()
+        results = [
+            j for j in results
+            if cat_wanted in j.get("category", "").lower()
+        ]
 
     # Tag filter
     if tags:
@@ -446,6 +618,7 @@ async def get_jobs(
             or needle in j.get("company", "").lower()
             or needle in j.get("location", "").lower()
             or needle in j.get("description", "").lower()
+            or needle in j.get("category", "").lower()
             or any(needle in t.lower() for t in j.get("tags", []))
         ]
 

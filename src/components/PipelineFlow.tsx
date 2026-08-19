@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Health, Stats } from '@/types';
 
 interface PipelineFlowProps {
@@ -24,19 +24,22 @@ export default function PipelineFlow({ health, stats }: PipelineFlowProps) {
   };
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between border-b border-neutral-100 pb-3 mb-4">
+    <div className="rounded-xl border border-[#D9E2DC] bg-white p-4 shadow-xs">
+      <div className="flex items-center justify-between border-b border-[#D9E2DC] pb-3 mb-4">
         <div>
-          <h2 className="text-xs font-mono font-bold tracking-wider uppercase text-neutral-800">
+          <h2 className="text-xs font-mono font-bold tracking-wider uppercase text-[#17211C] flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#D6A84F]" />
             DATA PIPELINE
           </h2>
-          <p className="text-xs text-neutral-500 mt-0.5">
-            Multi-source concurrent ingestion & deduplication flow
+          <p className="text-xs text-[#66736C] mt-0.5">
+            Multi-source concurrent ingestion, validation & cross-deduplication
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-mono">
-          <span className="text-neutral-400">Total Valid Ingested:</span>
-          <span className="font-bold text-neutral-900">{stats?.accepted ?? 0}</span>
+          <span className="text-[#66736C]">Total Ingested:</span>
+          <span className="font-bold text-[#12372A] bg-[#E8EFEA] px-2 py-0.5 rounded border border-[#D9E2DC]">
+            {stats?.accepted ?? 0}
+          </span>
         </div>
       </div>
 
@@ -51,20 +54,20 @@ export default function PipelineFlow({ health, stats }: PipelineFlowProps) {
             return (
               <div
                 key={src.key}
-                className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50/80 px-3 py-2 text-xs"
+                className="flex items-center justify-between rounded-lg border border-[#D9E2DC] bg-[#F4F7F5] px-3 py-2 text-xs font-mono"
               >
                 <div className="flex items-center gap-2">
                   <span
                     className={`h-2 w-2 rounded-full ${
-                      isHealthy ? 'bg-emerald-500' : 'bg-amber-500'
+                      isHealthy ? 'bg-[#1F6F54]' : 'bg-amber-500'
                     }`}
                   />
-                  <span className="font-medium text-neutral-900">{src.name}</span>
+                  <span className="font-bold text-[#17211C]">{src.name}</span>
                 </div>
-                <div className="flex items-center gap-2 font-mono text-[11px]">
-                  <span className="text-neutral-500">{count} jobs</span>
+                <div className="flex items-center gap-2 text-[11px]">
+                  <span className="text-[#66736C]">{count} jobs</span>
                   {isHealthy ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-[#1F6F54]" />
                   ) : (
                     <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
                   )}
@@ -75,8 +78,8 @@ export default function PipelineFlow({ health, stats }: PipelineFlowProps) {
         </div>
 
         {/* Arrow connector */}
-        <div className="hidden md:flex items-center justify-center text-neutral-300">
-          <span className="font-mono text-sm">┼──→</span>
+        <div className="hidden md:flex items-center justify-center text-[#66736C]">
+          <span className="font-mono text-sm font-bold">┼──→</span>
         </div>
 
         {/* Pipeline steps */}
@@ -88,10 +91,10 @@ export default function PipelineFlow({ health, stats }: PipelineFlowProps) {
           ].map((step) => (
             <div
               key={step.label}
-              className="rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-xs"
+              className="rounded-lg border border-[#D9E2DC] bg-[#F4F7F5] p-2 text-xs"
             >
-              <p className="font-mono font-semibold text-neutral-900 text-[11px]">{step.label}</p>
-              <p className="text-[10px] text-neutral-500 mt-0.5">{step.desc}</p>
+              <p className="font-mono font-bold text-[#12372A] text-[11px]">{step.label}</p>
+              <p className="text-[10px] text-[#66736C] mt-0.5">{step.desc}</p>
             </div>
           ))}
         </div>

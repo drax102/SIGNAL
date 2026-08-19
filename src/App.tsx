@@ -16,6 +16,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('All');
   const [sourceFilter, setSourceFilter] = useState('All Sources');
+  const [categoryFilter, setCategoryFilter] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
@@ -30,7 +31,7 @@ export default function App() {
   const firstRender = useRef(true);
 
   const refresh = useCallback(
-    async (qStr: string, locStr: string, srcStr: string) => {
+    async (qStr: string, locStr: string, srcStr: string, catStr: string) => {
       setLoading(true);
       setError(null);
       try {
@@ -39,6 +40,7 @@ export default function App() {
             q: qStr || undefined,
             location: locStr !== 'All' ? locStr : undefined,
             source: srcStr !== 'All Sources' ? srcStr : undefined,
+            category: catStr !== 'All' ? catStr : undefined,
             limit: 200,
           }),
           fetchHealth(),
@@ -67,6 +69,7 @@ export default function App() {
         q: query || undefined,
         location: locationFilter !== 'All' ? locationFilter : undefined,
         source: sourceFilter !== 'All Sources' ? sourceFilter : undefined,
+        category: categoryFilter !== 'All' ? categoryFilter : undefined,
         limit: 200,
       });
 
@@ -95,7 +98,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    refresh('', 'All', 'All Sources');
+    refresh('', 'All', 'All Sources', 'All');
   }, [refresh]);
 
   useEffect(() => {
@@ -105,13 +108,13 @@ export default function App() {
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(
-      () => refresh(query, locationFilter, sourceFilter),
+      () => refresh(query, locationFilter, sourceFilter, categoryFilter),
       350
     );
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query, locationFilter, sourceFilter, refresh]);
+  }, [query, locationFilter, sourceFilter, categoryFilter, refresh]);
 
   // Client side sorting
   const sortedJobs = [...jobs].sort((a, b) => {
@@ -127,7 +130,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen bg-[#f8f8f6] text-neutral-900 font-sans antialiased">
+    <div className="min-h-screen bg-[#F4F7F5] text-[#17211C] font-sans antialiased">
       <Header
         health={health}
         syncing={syncing}
@@ -135,7 +138,7 @@ export default function App() {
         syncMessage={syncMessage}
       />
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-6">
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-5">
         {/* KPI Summary Cards */}
         <KpiCards stats={stats} health={health} />
 
@@ -150,6 +153,8 @@ export default function App() {
           onLocationChange={setLocationFilter}
           sourceFilter={sourceFilter}
           onSourceChange={setSourceFilter}
+          categoryFilter={categoryFilter}
+          onCategoryChange={setCategoryFilter}
           sortBy={sortBy}
           onSortChange={setSortBy}
           resultCount={sortedJobs.length}
@@ -160,7 +165,7 @@ export default function App() {
           <ErrorState
             message={error}
             health={health}
-            onRetry={() => refresh(query, locationFilter, sourceFilter)}
+            onRetry={() => refresh(query, locationFilter, sourceFilter, categoryFilter)}
           />
         )}
 
@@ -190,6 +195,7 @@ export default function App() {
               setQuery('');
               setLocationFilter('All');
               setSourceFilter('All Sources');
+              setCategoryFilter('All');
             }}
           />
         ) : (
@@ -207,9 +213,9 @@ export default function App() {
         />
 
         {/* Footer */}
-        <footer className="mt-12 border-t border-neutral-200 pt-6 text-xs text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono">
-          <p>SIGNAL — Multi-Source Job Intelligence Platform</p>
-          <p className="text-neutral-400">
+        <footer className="mt-12 border-t border-[#D9E2DC] pt-6 text-xs text-[#66736C] flex flex-col sm:flex-row items-center justify-between gap-2 font-mono">
+          <p className="font-bold">SIGNAL — MULTI-SOURCE JOB INTELLIGENCE</p>
+          <p className="text-[#66736C]">
             Sources: RemoteOK · Jobicy · Remotive
           </p>
         </footer>

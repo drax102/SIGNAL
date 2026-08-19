@@ -17,24 +17,28 @@ export default function KpiCards({ stats, health }: KpiCardsProps) {
       value: stats?.stored ?? 0,
       sub: `${stats?.fetched ?? 0} fetched`,
       icon: Database,
+      accent: 'border-l-4 border-l-[#12372A]',
     },
     {
-      label: 'REMOTE JOBS',
+      label: 'REMOTE',
       value: stats?.remote_jobs ?? 0,
       sub: 'Global remote listings',
       icon: Globe,
+      accent: 'border-l-4 border-l-[#1F6F54]',
     },
     {
-      label: 'INDIA JOBS',
+      label: 'INDIA',
       value: stats?.india_jobs ?? 0,
       sub: 'India geographic match',
       icon: MapPin,
+      accent: 'border-l-4 border-l-[#D6A84F]',
     },
     {
-      label: 'ACTIVE SOURCES',
-      value: `${activeSourcesCount} / 3`,
-      sub: health?.mode === 'live' ? 'RemoteOK, Jobicy, Remotive' : 'Fallback mode',
+      label: 'SOURCES',
+      value: activeSourcesCount,
+      sub: 'RemoteOK, Jobicy, Remotive',
       icon: Layers,
+      accent: 'border-l-4 border-l-[#12372A]',
     },
   ];
 
@@ -45,18 +49,20 @@ export default function KpiCards({ stats, health }: KpiCardsProps) {
         return (
           <div
             key={kpi.label}
-            className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm"
+            className={`rounded-xl border border-[#D9E2DC] bg-white p-4 shadow-xs ${kpi.accent} flex flex-col justify-between`}
           >
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-mono font-semibold tracking-wider text-neutral-500 uppercase">
+              <span className="text-[11px] font-mono font-bold tracking-wider text-[#66736C] uppercase">
                 {kpi.label}
-              </p>
-              <Icon className="h-4 w-4 text-neutral-400" />
+              </span>
+              <Icon className="h-4 w-4 text-[#1F6F54]" />
             </div>
-            <p className="mt-2 text-2xl font-bold font-mono tracking-tight text-neutral-900">
-              {kpi.value}
-            </p>
-            <p className="mt-1 text-[11px] text-neutral-500">{kpi.sub}</p>
+            <div className="mt-2">
+              <p className="text-3xl font-extrabold font-mono tracking-tight text-[#17211C]">
+                {kpi.value}
+              </p>
+              <p className="mt-1 text-[11px] text-[#66736C] font-mono">{kpi.sub}</p>
+            </div>
           </div>
         );
       })}

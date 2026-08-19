@@ -1,4 +1,4 @@
-import { X, ExternalLink, MapPin, Wallet, Calendar, Globe, Building2, Layers } from 'lucide-react';
+import { X, ExternalLink, MapPin, Wallet, Calendar, Globe, Building2, Layers, Tag } from 'lucide-react';
 import type { Job } from '@/types';
 import { relativeTime } from '@/utils';
 
@@ -10,27 +10,29 @@ interface JobDetailDrawerProps {
 export default function JobDetailDrawer({ job, onClose }: JobDetailDrawerProps) {
   if (!job) return null;
 
+  const skills = job.tags || [];
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-neutral-950/40 backdrop-blur-xs flex justify-end">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-[#17211C]/50 backdrop-blur-xs flex justify-end">
       <div
-        className="w-full max-w-xl bg-white shadow-2xl h-full flex flex-col border-l border-neutral-200 animate-in slide-in-from-right duration-200"
+        className="w-full max-w-xl bg-white shadow-2xl h-full flex flex-col border-l border-[#D9E2DC] animate-in slide-in-from-right duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-4 bg-neutral-50/50">
+        <div className="flex items-center justify-between border-b border-[#D9E2DC] px-6 py-4 bg-[#F4F7F5]">
           <div className="flex items-center gap-2">
-            <span className="rounded border border-neutral-300 bg-white px-2 py-0.5 font-mono text-[11px] font-semibold text-neutral-700">
+            <span className="rounded border border-[#D9E2DC] bg-white px-2 py-0.5 font-mono text-[11px] font-bold text-[#12372A] uppercase">
               {job.source}
             </span>
             {job.is_india && (
-              <span className="rounded bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+              <span className="rounded bg-amber-100 border border-amber-300 px-2 py-0.5 font-mono text-[11px] font-bold text-amber-900">
                 🇮🇳 India Relevant
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
+            className="rounded-lg p-1.5 text-[#66736C] hover:bg-[#D9E2DC] hover:text-[#17211C] transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -44,85 +46,103 @@ export default function JobDetailDrawer({ job, onClose }: JobDetailDrawerProps) 
               <img
                 src={job.logo}
                 alt=""
-                className="h-14 w-14 rounded-xl bg-neutral-50 object-cover border border-neutral-200 flex-shrink-0"
+                className="h-14 w-14 rounded-xl bg-[#F4F7F5] object-cover border border-[#D9E2DC] flex-shrink-0"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
               />
             ) : (
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-neutral-900 text-white font-bold text-lg font-mono flex-shrink-0">
+              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#12372A] text-white font-bold text-lg font-mono flex-shrink-0">
                 {job.company ? job.company.charAt(0).toUpperCase() : 'C'}
               </div>
             )}
             <div>
-              <h2 className="text-xl font-bold text-neutral-900 tracking-tight">{job.title}</h2>
-              <p className="mt-1 text-sm font-semibold text-neutral-600 flex items-center gap-1.5">
-                <Building2 className="h-4 w-4 text-neutral-400" />
+              <h2 className="text-xl font-extrabold text-[#17211C] tracking-tight leading-snug">
+                {job.title}
+              </h2>
+              <p className="mt-1 text-sm font-bold text-[#1F6F54] flex items-center gap-1.5 font-mono uppercase">
+                <Building2 className="h-4 w-4 text-[#66736C]" />
                 {job.company}
               </p>
             </div>
           </div>
 
           {/* Quick Info Grid */}
-          <div className="grid grid-cols-2 gap-3 rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 text-xs font-mono">
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-[#D9E2DC] bg-[#F4F7F5] p-4 text-xs font-mono">
             <div>
-              <span className="text-neutral-400 text-[10px] uppercase tracking-wider block">Location</span>
-              <span className="font-semibold text-neutral-800 flex items-center gap-1 mt-0.5">
-                <MapPin className="h-3.5 w-3.5 text-neutral-400" />
+              <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Location</span>
+              <span className="font-bold text-[#17211C] flex items-center gap-1 mt-0.5">
+                <MapPin className="h-3.5 w-3.5 text-[#1F6F54]" />
                 {job.location}
               </span>
             </div>
             <div>
-              <span className="text-neutral-400 text-[10px] uppercase tracking-wider block">Work Type</span>
-              <span className="font-semibold text-neutral-800 flex items-center gap-1 mt-0.5">
-                <Globe className="h-3.5 w-3.5 text-neutral-400" />
-                {job.remote ? 'Remote' : 'Onsite / Hybrid'}
+              <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Work Type</span>
+              <span className="font-bold text-[#17211C] flex items-center gap-1 mt-0.5">
+                <Globe className="h-3.5 w-3.5 text-[#1F6F54]" />
+                {job.remote ? 'Remote' : 'Onsite'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Category</span>
+              <span className="font-bold text-[#17211C] flex items-center gap-1 mt-0.5">
+                <Layers className="h-3.5 w-3.5 text-[#1F6F54]" />
+                {job.category || 'Engineering'}
+              </span>
+            </div>
+            <div>
+              <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Employment Type</span>
+              <span className="font-bold text-[#17211C] flex items-center gap-1 mt-0.5">
+                <Tag className="h-3.5 w-3.5 text-[#1F6F54]" />
+                {job.employment_type || 'Full-time'}
               </span>
             </div>
             {job.salary && (
               <div>
-                <span className="text-neutral-400 text-[10px] uppercase tracking-wider block">Salary</span>
-                <span className="font-semibold text-neutral-900 flex items-center gap-1 mt-0.5">
-                  <Wallet className="h-3.5 w-3.5 text-neutral-400" />
+                <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Salary</span>
+                <span className="font-bold text-[#12372A] flex items-center gap-1 mt-0.5">
+                  <Wallet className="h-3.5 w-3.5 text-[#1F6F54]" />
                   {job.salary}
                 </span>
               </div>
             )}
             <div>
-              <span className="text-neutral-400 text-[10px] uppercase tracking-wider block">Posted Date</span>
-              <span className="font-semibold text-neutral-800 flex items-center gap-1 mt-0.5">
-                <Calendar className="h-3.5 w-3.5 text-neutral-400" />
+              <span className="text-[#66736C] text-[10px] uppercase font-bold tracking-wider block">Posted Date</span>
+              <span className="font-bold text-[#17211C] flex items-center gap-1 mt-0.5">
+                <Calendar className="h-3.5 w-3.5 text-[#66736C]" />
                 {job.posted ? relativeTime(job.posted) : 'Recently'}
               </span>
             </div>
           </div>
 
-          {/* Skills / Tags */}
-          {job.tags && job.tags.length > 0 && (
-            <div>
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500 mb-2 flex items-center gap-1">
-                <Layers className="h-3.5 w-3.5" /> Skills & Categories
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {job.tags.map((tag) => (
+          {/* REQUIRED SKILLS */}
+          <div className="border-t border-[#D9E2DC] pt-5">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#12372A] mb-3">
+              REQUIRED SKILLS
+            </h3>
+            {skills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {skills.map((skill) => (
                   <span
-                    key={tag}
-                    className="rounded-md border border-neutral-200 bg-neutral-100 px-2.5 py-1 text-xs font-mono font-medium text-neutral-700"
+                    key={skill}
+                    className="rounded-md border border-[#D9E2DC] bg-[#E8EFEA] px-3 py-1 text-xs font-mono font-bold text-[#12372A]"
                   >
-                    {tag}
+                    {skill}
                   </span>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-xs font-mono italic text-[#66736C]">Skills not provided</p>
+            )}
+          </div>
 
           {/* Description Section */}
           {job.description && (
-            <div className="space-y-2 border-t border-neutral-200 pt-5">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-neutral-500">
-                Job Overview
+            <div className="space-y-2 border-t border-[#D9E2DC] pt-5">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[#12372A]">
+                JOB DESCRIPTION
               </h3>
-              <div className="text-xs leading-relaxed text-neutral-700 whitespace-pre-line bg-neutral-50/50 p-4 rounded-xl border border-neutral-200/60 max-h-96 overflow-y-auto">
+              <div className="text-xs leading-relaxed text-[#17211C] font-sans whitespace-pre-line bg-[#F4F7F5] p-4 rounded-xl border border-[#D9E2DC] max-h-96 overflow-y-auto">
                 {job.description}
               </div>
             </div>
@@ -130,15 +150,15 @@ export default function JobDetailDrawer({ job, onClose }: JobDetailDrawerProps) 
         </div>
 
         {/* Footer CTA */}
-        <div className="border-t border-neutral-200 p-4 bg-white">
+        <div className="border-t border-[#D9E2DC] p-4 bg-white">
           <a
             href={job.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 py-3 text-xs font-bold font-mono uppercase tracking-wider text-white shadow-sm transition-all hover:bg-neutral-800"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#12372A] py-3 text-xs font-bold font-mono uppercase tracking-wider text-white shadow-xs transition-all hover:bg-[#1F6F54] active:scale-98"
           >
             <span>View Original Job on {job.source}</span>
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4 text-[#D6A84F]" />
           </a>
         </div>
       </div>
