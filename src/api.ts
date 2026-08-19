@@ -1,6 +1,6 @@
 import type { Health, Job, JobsResponse, Stats } from '@/types';
 
-const RAW_API_BASE = import.meta.env.VITE_API_BASE || 'https://signal-rbcd.onrender.com';
+const RAW_API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 const API_BASE = RAW_API_BASE.replace(/\/+$/, '').replace(/\/api$/, '');
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -13,12 +13,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-export function fetchJobs(params: { q?: string; tags?: string; limit?: number }): Promise<Job[]> {
+export function fetchJobs(params: {
+  q?: string;
+  tags?: string;
+  source?: string;
+  location?: string;
+  limit?: number;
+}): Promise<Job[]> {
   const search = new URLSearchParams();
   if (params.q) search.set('q', params.q);
   if (params.tags) search.set('tags', params.tags);
+  if (params.source) search.set('source', params.source);
+  if (params.location) search.set('location', params.location);
   if (params.limit) search.set('limit', String(params.limit));
-  return request<JobsResponse>(`/jobs?${search.toString()}`).then((data) => data.jobs);
+  return request<JobsResponse>(`/jobs?${search.toString()}`).then((data) => data.jobs || []);
 }
 
 export const fetchHealth = () => request<Health>('/health');

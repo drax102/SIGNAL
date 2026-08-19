@@ -1,81 +1,218 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Activity, CheckCircle2, Database, ShieldAlert, XCircle } from 'lucide-react';
 import Header from '@/components/Header';
+import PipelineFlow from '@/components/PipelineFlow';
+import KpiCards from '@/components/KpiCards';
 import SearchBar from '@/components/SearchBar';
 import JobCard from '@/components/JobCard';
+import JobDetailDrawer from '@/components/JobDetailDrawer';
 import LoadingState from '@/components/LoadingState';
 import EmptyState from '@/components/EmptyState';
 import ErrorState from '@/components/ErrorState';
 import { fetchHealth, fetchJobs, fetchStats, syncJobs } from '@/api';
 import type { Health, Job, Stats } from '@/types';
 
-const formatTime = (value?: string | null) => value ? new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-
 export default function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [query, setQuery] = useState('');
+  const [locationFilter, setLocationFilter] = useState('All');
+  const [sourceFilter, setSourceFilter] = useState('All Sources');
+  const [sortBy, setSortBy] = useState('newest');
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<Health | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
 
-  const refresh = useCallback(async (q: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [data, h, s] = await Promise.all([fetchJobs({ q: q || undefined, limit: 60 }), fetchHealth(), fetchStats()]);
-      setJobs(data); setHealth(h); setStats(s);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load jobs');
-    } finally { setLoading(false); }
-  }, []);
+  const refresh = useCallback(
+    async (qStr: string, locStr: string, srcStr: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [data, h, s] = await Promise.all([
+          fetchJobs({
+            q: qStr || undefined,
+            location: locStr !== 'All' ? locStr : undefined,
+            source: srcStr !== 'All Sources' ? srcStr : undefined,
+            limit: 200,
+          }),
+          fetchHealth(),
+          fetchStats(),
+        ]);
+        setJobs(data);
+        setHealth(h);
+        setStats(s);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to connect to job service');
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   const handleSync = async () => {
-    setSyncing(true); setError(null);
-    try { await syncJobs(); await refresh(query); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Sync failed'); }
-    finally { setSyncing(false); }
+    setSyncing(true);
+    setError(null);
+    setSyncMessage(null);
+    try {
+      const updatedHealth = await syncJobs();
+      const updatedStats = await fetchStats();
+      const updatedJobs = await fetchJobs({
+        q: query || undefined,
+        location: locationFilter !== 'All' ? locationFilter : undefined,
+        source: sourceFilter !== 'All Sources' ? sourceFilter : undefined,
+        limit: 200,
+      });
+
+      setHealth(updatedHealth);
+      setStats(updatedStats);
+      setJobs(updatedJobs);
+
+      const degradedSources = Object.entries(updatedHealth.sources || {})
+        .filter(([, status]) => status !== 'healthy')
+        .map(([src]) => src);
+
+      if (degradedSources.length > 0) {
+        setSyncMessage(
+          `⚠ ${degradedSources.join(', ')} unavailable — processed ${updatedStats.stored} jobs from active sources.`
+        );
+      } else {
+        setSyncMessage(
+          `✓ Processed ${updatedStats.stored} jobs from ${updatedStats.sources} active sources (RemoteOK, Jobicy, Remotive).`
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
   };
 
-  useEffect(() => { refresh(''); }, [refresh]);
   useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
+    refresh('', 'All', 'All Sources');
+  }, [refresh]);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => refresh(query), 350);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, refresh]);
+    debounceRef.current = setTimeout(
+      () => refresh(query, locationFilter, sourceFilter),
+      350
+    );
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, locationFilter, sourceFilter, refresh]);
 
-  const healthy = health?.status === 'healthy' && health.mode === 'live';
+  // Client side sorting
+  const sortedJobs = [...jobs].sort((a, b) => {
+    if (sortBy === 'company') {
+      return a.company.localeCompare(b.company);
+    }
+    if (sortBy === 'newest') {
+      const dateA = a.posted ? new Date(a.posted).getTime() : 0;
+      const dateB = b.posted ? new Date(b.posted).getTime() : 0;
+      return dateB - dateA;
+    }
+    return 0; // relevance
+  });
+
   return (
-    <div className="min-h-screen bg-[#f7f7f5] text-slate-950">
-      <Header status={health?.status ?? 'not_synced'} mode={health?.mode ?? 'fallback'} syncing={syncing} onSync={handleSync} />
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-        <section className="mb-7 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-2xl"><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">INGESTION MONITOR</p><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Reliable job data, without the noise.</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">A small, observable pipeline that fetches, validates, deduplicates and serves public job listings.</p></div>
-            <div className="text-xs text-slate-500"><p>Source: <span className="font-medium text-slate-700">{health?.source ?? 'Loading…'}</span></p><p className="mt-1">Last successful sync: <span className="font-medium text-slate-700">{formatTime(health?.last_success)}</span></p></div>
-          </div>
-          <div className="mt-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            {[
-              ['Jobs stored', stats?.stored ?? 0, Database],
-              ['Accepted', stats?.accepted ?? 0, CheckCircle2],
-              ['Rejected', stats?.rejected ?? 0, XCircle],
-              ['Source', healthy ? 'LIVE' : 'FALLBACK', healthy ? Activity : ShieldAlert],
-            ].map(([label, value, Icon]) => <div key={String(label)} className="rounded-2xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between"><p className="text-xs font-medium text-slate-500">{label}</p><Icon className="h-4 w-4 text-slate-400" /></div><p className="mt-2 text-xl font-semibold tracking-tight">{value as string | number}</p></div>)}
-          </div>
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-            {['Fetch', 'Normalize', 'Validate', 'Deduplicate', 'Serve'].map((stage, index) => <div key={stage} className="flex items-center gap-2"><span className={`h-2 w-2 rounded-full ${index === 0 && !healthy ? 'bg-amber-500' : 'bg-emerald-500'}`} />{stage}{index < 4 && <span className="text-slate-300">→</span>}</div>)}
-          </div>
-        </section>
+    <div className="min-h-screen bg-[#f8f8f6] text-neutral-900 font-sans antialiased">
+      <Header
+        health={health}
+        syncing={syncing}
+        onSync={handleSync}
+        syncMessage={syncMessage}
+      />
 
-        <div className="mb-5"><SearchBar value={query} onChange={setQuery} resultCount={jobs.length} /></div>
-        {error && <div className="mb-5"><ErrorState message={error} onRetry={() => refresh(query)} /></div>}
-        {loading ? <LoadingState /> : jobs.length === 0 ? <EmptyState query={query} /> : <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{jobs.map(job => <JobCard key={job.id} job={job} />)}</div>}
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 space-y-6">
+        {/* KPI Summary Cards */}
+        <KpiCards stats={stats} health={health} />
 
-        <footer className="mt-10 border-t border-slate-200 pt-5 text-xs text-slate-400 sm:flex sm:items-center sm:justify-between"><p>Signal uses a bounded retry policy and explicit fallback mode.</p><p className="mt-1 sm:mt-0">Public source demo: RemoteOK</p></footer>
+        {/* Data Pipeline Technical Visualization */}
+        <PipelineFlow health={health} stats={stats} />
+
+        {/* Search & Filter Bar */}
+        <SearchBar
+          value={query}
+          onChange={setQuery}
+          locationFilter={locationFilter}
+          onLocationChange={setLocationFilter}
+          sourceFilter={sourceFilter}
+          onSourceChange={setSourceFilter}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
+          resultCount={sortedJobs.length}
+        />
+
+        {/* Error State */}
+        {error && (
+          <ErrorState
+            message={error}
+            health={health}
+            onRetry={() => refresh(query, locationFilter, sourceFilter)}
+          />
+        )}
+
+        {/* Fallback Alert Banner if applicable */}
+        {health?.mode === 'fallback' && !error && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-xs font-mono text-amber-900 flex items-center justify-between">
+            <div>
+              <span className="font-bold uppercase tracking-wider">⚠ Fallback dataset active:</span>{' '}
+              Live provider APIs are currently unreachable. Showing local cached demo dataset.
+            </div>
+            <button
+              onClick={handleSync}
+              className="underline font-bold hover:text-amber-950 ml-2"
+            >
+              Retry Live Sync
+            </button>
+          </div>
+        )}
+
+        {/* Job Grid / Loading / Empty State */}
+        {loading ? (
+          <LoadingState />
+        ) : sortedJobs.length === 0 ? (
+          <EmptyState
+            query={query}
+            onClear={() => {
+              setQuery('');
+              setLocationFilter('All');
+              setSourceFilter('All Sources');
+            }}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+            {sortedJobs.map((job) => (
+              <JobCard key={job.id} job={job} onSelect={setSelectedJob} />
+            ))}
+          </div>
+        )}
+
+        {/* Side Panel Drawer for Selected Job */}
+        <JobDetailDrawer
+          job={selectedJob}
+          onClose={() => setSelectedJob(null)}
+        />
+
+        {/* Footer */}
+        <footer className="mt-12 border-t border-neutral-200 pt-6 text-xs text-neutral-500 flex flex-col sm:flex-row items-center justify-between gap-2 font-mono">
+          <p>SIGNAL — Multi-Source Job Intelligence Platform</p>
+          <p className="text-neutral-400">
+            Sources: RemoteOK · Jobicy · Remotive
+          </p>
+        </footer>
       </main>
     </div>
   );
